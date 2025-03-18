@@ -4,10 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <string>
+#include <exception>
+#include <iomanip>
 
 #define LENGTH 256
 #define ZERO 128
 #define BASE 1000
+#define LGBASE 3
 
 #define ERROR -1
 
@@ -26,8 +30,9 @@ public:
     real_number_sign sign;
     int* data;
     BasicNum();
+    BasicNum(std::string str);
     BasicNum(const BasicNum& num);
-    BasicNum& operator = (const BasicNum& num);
+    BasicNum& operator = (const BasicNum&) = delete;
     ~BasicNum();
     int operator [] (int idx) const;
     int& operator [] (int idx);
@@ -39,5 +44,6 @@ void kernel_carry(BasicNum* dst);
 void kernel_flip(BasicNum* dst);
 void flip_sign(real_number_sign& sign);
 real_number_sign sign_for_mult(real_number_sign sr1, real_number_sign sr2);
+std::ostream& operator << (std::ostream& stream, const BasicNum& sr1);
 
 }
