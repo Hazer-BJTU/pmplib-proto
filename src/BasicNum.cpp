@@ -10,36 +10,54 @@ BasicNum::~BasicNum() {
     free(data);
 }
 
-void unsigned_addition(const BasicNum& sr1, const BasicNum& sr2, BasicNum& dst) {
+int BasicNum::operator [] (int idx) const {
+    return data[idx];
+}
+
+int& BasicNum::operator [] (int idx) {
+    return data[idx];
+}
+
+void kernel_add_with_carry(const BasicNum* sr1, const BasicNum* sr2, BasicNum* dst) {
     int carry = 0;
     for (int i = 0; i < LENGTH; i++) {
-        dst.data[i] = sr1.data[i] + sr2.data[i] + carry;
-        carry = dst.data[i] / BASE;
-        dst.data[i] %= BASE;
+        dst->data[i] = sr1->data[i] + sr2->data[i] + carry;
+        carry = dst->data[i] / BASE;
+        dst->data[i] %= BASE;
     }
     return;
 }
 
-void unsigned_multiply_prec(const BasicNum& sr1, const BasicNum& sr2, BasicNum& dst) {
-    memset(dst.data, 0, sizeof(dst.data));
+void kernel_bare_subtraction(const BasicNum* sr1, const BasicNum* sr2, BasicNum* dst) {
     for (int i = 0; i < LENGTH; i++) {
-        for (int j = 0; j < LENGTH; j++) {
-            int k = i + j - ZERO;
-            if (k < 0 || k >= LENGTH) {
-                continue;
-            }
-            dst.data[k] += sr1.data[i] * sr2.data[j];
+        dst->data[i] = sr1->data[i] - sr2->data[i];
+    }
+    return;
+}
+
+void kernel_carry(BasicNum* dst) {
+    int carry = 0;
+    for (int i = 0; i < LENGTH; i++) {
+        dst->data[i] += carry;
+        if (dst->data[i] < 0) {
+            //When performing subtraction, dst[i] + BASE must be greater than 0.
+            carry = -1;
+            dst->data[i] += BASE;
+        } else {
+            carry = dst->data[i] / BASE;
+            dst->data[i] %= BASE;
         }
     }
     return;
 }
 
-void unsigned_calc_carry(BasicNum& dst) {
-    int carry = 0;
+void kernel_flip(BasicNum* dst) {
+    int carry = 1;
     for (int i = 0; i < LENGTH; i++) {
-        dst.data[i] += carry;
-        carry = dst.data[i] / BASE;
-        dst.data[i] %= BASE;
+        dst->data[i] = BASE - dst->data[i] - 1;
+        dst->data[i] += carry;
+        carry = dst->data[i] / BASE;
+        dst->data[i] %= BASE;
     }
     return;
 }
