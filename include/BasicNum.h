@@ -11,6 +11,8 @@
 
 #define ERROR -1
 
+namespace rpc1k {
+
 enum real_number_sign {POSITIVE, NEGATIVE};
 
 /*
@@ -35,3 +37,5 @@ void kernel_carry(BasicNum* dst);
 void kernel_flip(BasicNum* dst);
 void flip_sign(real_number_sign& sign);
 real_number_sign sign_for_mult(real_number_sign sr1, real_number_sign sr2);
+
+}

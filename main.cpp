@@ -1,6 +1,8 @@
 #include "./include/BasicNum.h"
 #include <iostream>
 
+using namespace rpc1k;
+
 int main() {
     BasicNum x, y, z;
     x.data[ZERO + 1] = 445, x.data[ZERO] = 195, x.data[ZERO - 1] = 443;

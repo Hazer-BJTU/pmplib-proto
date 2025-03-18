@@ -1,5 +1,7 @@
 #include "../include/BasicNum.h"
 
+namespace rpc1k {
+
 BasicNum::BasicNum() {
     sign = POSITIVE;
     data = (int*)malloc(sizeof(int) * LENGTH);
@@ -80,4 +82,6 @@ void flip_sign(real_number_sign& sign) {
 real_number_sign sign_for_mult(real_number_sign sr1, real_number_sign sr2) {
     if (sr1 == sr2) return POSITIVE;
     else return NEGATIVE;
+}
+
 }
