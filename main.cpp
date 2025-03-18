@@ -4,10 +4,17 @@
 using namespace rpc1k;
 
 int main() {
-    Real r1("-1049.44572"), r2, r3("5520.79631");
-    kernel_add_with_carry(reinterpret_cast<const BasicNum*>(r1.p.get()), reinterpret_cast<const BasicNum*>(r3.p.get()), reinterpret_cast<BasicNum*>(r2.p.get()));
-    std::cout << r1 << std::endl;
+    Real r1("-10145779.49431006100");
+    Real r2("+49578890.99800106");
+    Real r3;
+    kernel_multiply_interval(
+        reinterpret_cast<const BasicNum*>(r1.p.get()),
+        reinterpret_cast<const BasicNum*>(r2.p.get()),
+        reinterpret_cast<BasicNum*>(r3.p.get()),
+        0,
+        LENGTH
+    );
+    kernel_multiply_carry(reinterpret_cast<BasicNum*>(r3.p.get()));
     std::cout << r3 << std::endl;
-    std::cout << r2 << std::endl;
     return 0;
 }

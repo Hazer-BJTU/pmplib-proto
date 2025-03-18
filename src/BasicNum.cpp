@@ -100,33 +100,51 @@ void kernel_add_with_carry(const BasicNum* sr1, const BasicNum* sr2, BasicNum* d
     return;
 }
 
-void kernel_bare_subtraction(const BasicNum* sr1, const BasicNum* sr2, BasicNum* dst) {
-    for (int i = 0; i < LENGTH; i++) {
-        dst->data[i] = sr1->data[i] - sr2->data[i];
-    }
-    return;
-}
-
-void kernel_carry(BasicNum* dst) {
+int kernel_subtraction_with_carry(const BasicNum* sr1, const BasicNum* sr2, BasicNum* dst) {
     int carry = 0;
     for (int i = 0; i < LENGTH; i++) {
-        dst->data[i] += carry;
+        dst->data[i] = sr1->data[i] - sr2->data[i] + carry;
         if (dst->data[i] < 0) {
-            //When performing subtraction, dst[i] + BASE must be greater than 0.
             carry = -1;
             dst->data[i] += BASE;
         } else {
-            carry = dst->data[i] / BASE;
-            dst->data[i] %= BASE;
+            carry = 0;
+        }
+    }
+    if (dst->data[LENGTH - 1] == BASE - 1) {
+        carry = 1;
+        for (int i = 0; i < LENGTH; i++) {
+            dst->data[i] = BASE - 1 - dst->data[i] + carry;
+            if (dst->data[i] == BASE) {
+                dst->data[i] = 0;
+                carry = 1;
+            } else {
+                carry = 0;
+            }
+        }
+        return FLIP_SIGN;
+    } else {
+        return HOLD_SIGN;
+    }
+}
+
+void kernel_multiply_interval(const BasicNum* sr1, const BasicNum* sr2, BasicNum* dst, int left, int right) {
+    for (int k = left; k < right; k++) {
+        dst->data[k] = 0;
+        for (int i = 0; i < LENGTH; i++) {
+            int j = k + ZERO - i;
+            if (j < 0 || j >= LENGTH) {
+                continue;
+            }
+            dst->data[k] += sr1->data[i] * sr2->data[j];
         }
     }
     return;
 }
 
-void kernel_flip(BasicNum* dst) {
-    int carry = 1;
+void kernel_multiply_carry(BasicNum* dst) {
+    int carry = 0;
     for (int i = 0; i < LENGTH; i++) {
-        dst->data[i] = BASE - dst->data[i] - 1;
         dst->data[i] += carry;
         carry = dst->data[i] / BASE;
         dst->data[i] %= BASE;
