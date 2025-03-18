@@ -26,6 +26,8 @@ public:
     real_number_sign sign;
     int* data;
     BasicNum();
+    BasicNum(const BasicNum& num);
+    BasicNum& operator = (const BasicNum& num);
     ~BasicNum();
     int operator [] (int idx) const;
     int& operator [] (int idx);

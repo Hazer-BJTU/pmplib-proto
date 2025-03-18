@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 set(SRC 
     ${PROJECT_SOURCE_DIR}/src/BasicNum.cpp
+    ${PROJECT_SOURCE_DIR}/src/Real.cpp
     ${PROJECT_SOURCE_DIR}/main.cpp
 )
 

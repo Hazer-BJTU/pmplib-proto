@@ -12,6 +12,29 @@ BasicNum::BasicNum() {
     memset(data, 0, sizeof(int) * LENGTH);
 }
 
+BasicNum::BasicNum(const BasicNum& num) {
+    assert(this != &num);
+    sign = num.sign;
+    data = (int*)malloc(sizeof(int) * LENGTH);
+    if (!data) {
+        std::cerr << "Failed to allocate memory!" << std::endl;
+        exit(ERROR);
+    }
+    memcpy(data, num.data, sizeof(int) * LENGTH);
+}
+
+BasicNum& BasicNum::operator = (const BasicNum& num) {
+    assert(this != &num);
+    sign = num.sign;
+    data = (int*)malloc(sizeof(int) * LENGTH);
+    if (!data) {
+        std::cerr << "Failed to allocate memory!" << std::endl;
+        exit(ERROR);
+    }
+    memcpy(data, num.data, sizeof(int) * LENGTH);
+    return *this;
+}
+
 BasicNum::~BasicNum() {
     if (data) {
         free(data);
