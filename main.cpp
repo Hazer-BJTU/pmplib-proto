@@ -4,8 +4,8 @@
 using namespace rpc1k;
 
 int main() {
-    Real r1("-10145779.49431006100");
-    Real r2("+49578890.99800106");
+    Real r1("0.49");
+    Real r2("0.01");
     Real r3;
     kernel_multiply_interval(
         reinterpret_cast<const BasicNum*>(r1.p.get()),

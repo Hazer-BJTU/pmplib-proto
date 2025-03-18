@@ -2,13 +2,15 @@
 
 namespace rpc1k {
 
-BasicNum::BasicNum() {
+BasicNum::BasicNum(bool delayed) {
     sign = POSITIVE;
-    data = (int*)malloc(sizeof(int) * LENGTH);
-    if (!data) {
-        throw std::bad_alloc();
+    if (!delayed) {
+        data = (int*)malloc(sizeof(int) * LENGTH);
+        if (!data) {
+            throw std::bad_alloc();
+        }
+        memset(data, 0, sizeof(int) * LENGTH);
     }
-    memset(data, 0, sizeof(int) * LENGTH);
 }
 
 BasicNum::BasicNum(std::string str): BasicNum() {
@@ -27,7 +29,7 @@ BasicNum::BasicNum(std::string str): BasicNum() {
         if (point == std::string::npos) {
             for (int i = len - 1; i >= 0; i--) {
                 if (str[i] < '0' || str[i] > '9') {
-                    throw "Please enter decimal numbers!";
+                    throw std::invalid_argument("Please enter decimal numbers!");
                 }
                 int bias = len - i - 1, value = str[i] - '0';
                 int k = bias / LGBASE, power = bias % LGBASE;
@@ -39,7 +41,7 @@ BasicNum::BasicNum(std::string str): BasicNum() {
         } else {
             for (int i = point - 1; i >= 0; i--) {
                 if (str[i] < '0' || str[i] > '9') {
-                    throw "Please enter decimal numbers!";
+                    throw std::invalid_argument("Please enter decimal numbers!");
                 }
                 int bias = point - i - 1, value = str[i] - '0';
                 int k = bias / LGBASE, power = bias % LGBASE;
@@ -50,7 +52,7 @@ BasicNum::BasicNum(std::string str): BasicNum() {
             }
             for (int i = point + 1; i < len; i++) {
                 if (str[i] < '0' || str[i] > '9') {
-                    throw "Please enter decimal numbers!";
+                    throw std::invalid_argument("Please enter decimal numbers!");
                 }
                 int bias = i - point - 1, value = str[i] - '0';
                 int k = bias / LGBASE, power = LGBASE - bias % LGBASE - 1;
@@ -88,6 +90,17 @@ int BasicNum::operator [] (int idx) const {
 int& BasicNum::operator [] (int idx) {
     assert(idx >= 0 && idx < LENGTH);
     return data[idx];
+}
+
+void BasicNum::initialize() {
+    if (!data) {
+        data = (int*)malloc(sizeof(int) * LENGTH);
+        if (!data) {
+            throw std::bad_alloc();
+        }
+        memset(data, 0, sizeof(int) * LENGTH);
+    }
+    return;
 }
 
 void kernel_add_with_carry(const BasicNum* sr1, const BasicNum* sr2, BasicNum* dst) {

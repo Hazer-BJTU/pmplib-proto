@@ -31,13 +31,14 @@ class BasicNum {
 public:
     real_number_sign sign;
     int* data;
-    BasicNum();
+    BasicNum(bool delayed=false);
     BasicNum(std::string str);
     BasicNum(const BasicNum& num);
     BasicNum& operator = (const BasicNum&) = delete;
     ~BasicNum();
     int operator [] (int idx) const;
     int& operator [] (int idx);
+    void initialize();
 };
 
 void kernel_add_with_carry(const BasicNum* sr1, const BasicNum* sr2, BasicNum* dst);
