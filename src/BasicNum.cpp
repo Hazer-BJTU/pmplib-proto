@@ -3,18 +3,27 @@
 BasicNum::BasicNum() {
     sign = POSITIVE;
     data = (int*)malloc(sizeof(int) * LENGTH);
-    memset(data, 0, sizeof(data));
+    if (!data) {
+        std::cerr << "Failed to allocate memory!" << std::endl;
+        exit(ERROR);
+    }
+    memset(data, 0, sizeof(int) * LENGTH);
 }
 
 BasicNum::~BasicNum() {
-    free(data);
+    if (data) {
+        free(data);
+        data = NULL;
+    }
 }
 
 int BasicNum::operator [] (int idx) const {
+    assert(idx >= 0 && idx < LENGTH);
     return data[idx];
 }
 
 int& BasicNum::operator [] (int idx) {
+    assert(idx >= 0 && idx < LENGTH);
     return data[idx];
 }
 
@@ -60,4 +69,15 @@ void kernel_flip(BasicNum* dst) {
         dst->data[i] %= BASE;
     }
     return;
+}
+
+void flip_sign(real_number_sign& sign) {
+    if (sign == POSITIVE) sign = NEGATIVE;
+    else sign = POSITIVE;
+    return;
+}
+
+real_number_sign sign_for_mult(real_number_sign sr1, real_number_sign sr2) {
+    if (sr1 == sr2) return POSITIVE;
+    else return NEGATIVE;
 }
