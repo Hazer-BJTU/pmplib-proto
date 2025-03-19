@@ -7,6 +7,7 @@
 #include <string>
 #include <exception>
 #include <iomanip>
+#include <limits.h>
 
 #define LENGTH 256
 #define ZERO 128

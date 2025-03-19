@@ -15,6 +15,26 @@ BasicNum::BasicNum(bool delayed) {
 
 BasicNum::BasicNum(std::string str): BasicNum() {
     int len = str.length();
+    int exp_pos = str.find_first_of("Ee"), exp = 0, exp_sign = 1;
+    if (exp_pos != std::string::npos) {
+        int i = exp_pos + 1;
+        if (i < len) {
+            if (str[i] == '+') i++;
+            else if (str[i] == '-') i++, exp_sign = -1;
+            for (; i < len; i++) {
+                if (str[i] < '0' || str[i] > '9') {
+                    throw std::invalid_argument("Please enter decimal numbers!");
+                }
+                if ((INT_MAX - (str[i] - '0')) / 10 < exp) {
+                    throw std::overflow_error("The exponent is too large for fixed point numbers!");
+                }
+                exp = exp * 10 + str[i] - '0';
+            }
+        }
+        exp *= exp_sign;
+        str = str.substr(0, exp_pos);
+        len = str.length();
+    }
     if (len != 0) {
         sign = POSITIVE;
         if (str[0] == '+') {
@@ -25,41 +45,40 @@ BasicNum::BasicNum(std::string str): BasicNum() {
             str = str.substr(1, len - 1);
             len--;
         }
-        int point = str.find('.');
+        int point = str.find('.'), anchor;
         if (point == std::string::npos) {
-            for (int i = len - 1; i >= 0; i--) {
-                if (str[i] < '0' || str[i] > '9') {
-                    throw std::invalid_argument("Please enter decimal numbers!");
-                }
-                int bias = len - i - 1, value = str[i] - '0';
-                int k = bias / LGBASE, power = bias % LGBASE;
-                for (int j = 0; j < power; j++) {
-                    value *= 10;
-                }
-                data[k + ZERO] += value;
-            }
+            anchor = len - 1 + exp;
         } else {
-            for (int i = point - 1; i >= 0; i--) {
-                if (str[i] < '0' || str[i] > '9') {
-                    throw std::invalid_argument("Please enter decimal numbers!");
-                }
-                int bias = point - i - 1, value = str[i] - '0';
+            str.erase(point, 1);
+            len = str.length();
+            anchor = point - 1 + exp;
+        }
+        for (int i = 0; i < len; i++) {
+            if (str[i] < '0' || str[i] > '9') {
+                throw std::invalid_argument("Please enter a decimal number!");
+            }
+            int bias = anchor - i, value = str[i] - '0';
+            if (bias >= 0) {
                 int k = bias / LGBASE, power = bias % LGBASE;
                 for (int j = 0; j < power; j++) {
                     value *= 10;
                 }
-                data[ZERO + k] += value;
-            }
-            for (int i = point + 1; i < len; i++) {
-                if (str[i] < '0' || str[i] > '9') {
-                    throw std::invalid_argument("Please enter decimal numbers!");
+                if (ZERO + k >= 0 && ZERO + k < LENGTH) {
+                    data[ZERO + k] += value;
+                } else {
+                    std::cerr << "Warning: The number may be clipped due to overflow!" << std::endl;
                 }
-                int bias = i - point - 1, value = str[i] - '0';
-                int k = bias / LGBASE, power = LGBASE - bias % LGBASE - 1;
+            } else {
+                bias = -bias;
+                int k = (bias + LGBASE - 1) / LGBASE, power = LGBASE - 1 - (bias - 1) % LGBASE;
                 for (int j = 0; j < power; j++) {
                     value *= 10;
                 }
-                data[ZERO - k - 1] += value;
+                if (ZERO - k >= 0 && ZERO - k < LENGTH) {
+                    data[ZERO - k] += value;
+                } else {
+                    std::cerr << "Warning: The number may be clipped due to overflow!" << std::endl;
+                }
             }
         }
     }
