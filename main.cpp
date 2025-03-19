@@ -1,10 +1,10 @@
-#include "./include/Real.h"
+#include "Real.h"
 #include <iostream>
 
 using namespace rpc1k;
 
 int main() {
-    Real r1("10E300"), r2("+"), r3;
+    Real r1("4.316944341002E8"), r2("5.768091431E5"), r3;
     kernel_add_with_carry(
         reinterpret_cast<const BasicNum*>(r1.p.get()),
         reinterpret_cast<const BasicNum*>(r2.p.get()),

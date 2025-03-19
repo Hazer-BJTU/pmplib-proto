@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BasicNum.h"
+#include "CompGraphNodes.h"
 #include <memory>
 
 namespace rpc1k {
