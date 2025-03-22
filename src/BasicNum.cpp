@@ -23,10 +23,10 @@ BasicNum::BasicNum(std::string str): BasicNum() {
             else if (str[i] == '-') i++, exp_sign = -1;
             for (; i < len; i++) {
                 if (str[i] < '0' || str[i] > '9') {
-                    throw std::invalid_argument("Please enter decimal numbers!");
+                    throw std::invalid_argument("[Error]: Please enter decimal numbers!");
                 }
                 if ((INT_MAX - (str[i] - '0')) / 10 < exp) {
-                    throw std::overflow_error("The exponent is too large for fixed point numbers!");
+                    throw std::overflow_error("[Error]: The given exponent is too large for fixed point numbers!");
                 }
                 exp = exp * 10 + str[i] - '0';
             }
@@ -53,9 +53,10 @@ BasicNum::BasicNum(std::string str): BasicNum() {
             len = str.length();
             anchor = point - 1 + exp;
         }
+        bool warned = false;
         for (int i = 0; i < len; i++) {
             if (str[i] < '0' || str[i] > '9') {
-                throw std::invalid_argument("Please enter a decimal number!");
+                throw std::invalid_argument("[Error]: Please enter a decimal number!");
             }
             int bias = anchor - i, value = str[i] - '0';
             if (bias >= 0) {
@@ -65,8 +66,9 @@ BasicNum::BasicNum(std::string str): BasicNum() {
                 }
                 if (ZERO + k >= 0 && ZERO + k < LENGTH) {
                     data[ZERO + k] += value;
-                } else {
-                    std::cerr << "Warning: The number may be clipped due to overflow!" << std::endl;
+                } else if (!warned) {
+                    std::cerr << "[Warning]: The given number may be clipped due to overflow!" << std::endl;
+                    warned = true;
                 }
             } else {
                 bias = -bias;
@@ -76,8 +78,9 @@ BasicNum::BasicNum(std::string str): BasicNum() {
                 }
                 if (ZERO - k >= 0 && ZERO - k < LENGTH) {
                     data[ZERO - k] += value;
-                } else {
-                    std::cerr << "Warning: The number may be clipped due to overflow!" << std::endl;
+                } else if (!warned) {
+                    std::cerr << "[Warning]: The given number may be clipped due to overflow!" << std::endl;
+                    warned = true;
                 }
             }
         }
