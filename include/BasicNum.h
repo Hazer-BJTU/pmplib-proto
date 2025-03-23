@@ -9,16 +9,16 @@
 #include <iomanip>
 #include <limits.h>
 
-#define LENGTH 256
-#define ZERO 128
-#define BASE 1000
-#define LGBASE 3
-#define FLIP_SIGN 1
-#define HOLD_SIGN 0
-
-#define ERROR -1
-
 namespace rpc1k {
+
+static constexpr int LENGTH = 256;
+static constexpr int ZERO = 128;
+static constexpr int BASE = 1000;
+static constexpr int LGBASE = 3;
+static constexpr int FLIP_SIGN = 1;
+static constexpr int HOLD_SIGN = 0;
+
+static constexpr int ERROR = -1;
 
 enum real_number_sign {POSITIVE, NEGATIVE};
 
