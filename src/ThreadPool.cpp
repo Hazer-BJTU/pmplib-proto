@@ -16,7 +16,7 @@ void ThreadPool::enqueue(const std::weak_ptr<GraphNode>& node_ptr) {
 
 std::weak_ptr<GraphNode> ThreadPool::grab() {
     std::unique_lock<std::mutex> lock1(q_lock);
-    content.wait(lock1, [this]() -> bool {return !this->q.empty() || end_flag;});
+    content.wait(lock1, [this]() -> bool {return !this->q.empty() || this->end_flag;});
     if (end_flag && this->q.empty()) {
         return std::weak_ptr<GraphNode>();
     } else {
@@ -70,7 +70,7 @@ void ThreadPool::set(int idx) {
 
 void ThreadPool::finish() {
     std::unique_lock<std::mutex> lock(q_lock);
-    all_completed.wait(lock, [this]() -> bool {return end_flag;});
+    all_completed.wait(lock, [this]() -> bool {return this->end_flag;});
     content.notify_all();
     lock.unlock();
     for (auto& thread: threads) {
