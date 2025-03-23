@@ -32,10 +32,10 @@ public:
     size_t num_threads;
     std::vector<std::thread> threads;
     std::vector<bool> terminate_conditions;
-    std::mutex conditions_lock;
     std::condition_variable all_completed;
     void set(int idx);
     void finish();
+    int add_terminal_task();
 };
 
 }

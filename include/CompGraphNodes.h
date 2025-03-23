@@ -21,6 +21,7 @@ public:
     std::vector<int> condition_card;
     std::vector<bool> conditions;
     std::mutex conditon_lock;
+    int terminate_condition;
     GraphNode();
     ~GraphNode();
     GraphNode(const GraphNode&) = delete;

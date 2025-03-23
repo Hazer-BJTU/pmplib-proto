@@ -7,7 +7,7 @@ namespace rpc1k {
 
 class CompReign {
 public:
-
+    
 };
 
 }

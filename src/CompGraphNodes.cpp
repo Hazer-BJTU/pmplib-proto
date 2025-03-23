@@ -19,7 +19,7 @@ void GraphNode::unbind() {
 void GraphNode::set(int idx) {
     std::lock_guard<std::mutex> lock(conditon_lock);
     if (idx < 0 || idx >= conditions.size()) {
-        throw std::invalid_argument("[Error]: Condition access out of boundary!");
+        throw std::out_of_range("[Error]: Invalid condition index!");
     }
     conditions[idx] = true;
     return;
