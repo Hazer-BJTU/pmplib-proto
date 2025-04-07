@@ -28,7 +28,7 @@ std::weak_ptr<GraphNode> ThreadPool::grab() {
                 std::cerr << "[Warning]: Unexpected task modification." << std::endl;
             }
         } while(node_ptr.expired() && !q.empty());
-        space.notify_one();
+        space.notify_all();
         return node_ptr;
     }
 }
