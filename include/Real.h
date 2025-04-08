@@ -8,7 +8,7 @@ namespace rpc1k {
 
 class Real {
 public:
-    std::shared_ptr<BasicNum> p;
+    std::shared_ptr<GraphNode> p;
     Real();
     Real(std::string str);
     Real(const Real& r);
