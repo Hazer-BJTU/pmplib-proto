@@ -12,6 +12,7 @@ set(SRC
     ${PROJECT_SOURCE_DIR}/src/Real.cpp
     ${PROJECT_SOURCE_DIR}/src/CompGraphNodes.cpp
     ${PROJECT_SOURCE_DIR}/src/CompReign.cpp
+    ${PROJECT_SOURCE_DIR}/src/ThreadPool.cpp
 )
 
 add_compile_options(-O2)
