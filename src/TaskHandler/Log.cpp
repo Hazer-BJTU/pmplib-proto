@@ -30,7 +30,10 @@ void Log::end_debug() {
     return;
 }
 
-void Log::err(const std::string& msg, errlevel level, int exitcode) {
+void Log::err(
+    const std::string& msg, errlevel level, int exitcode,
+    const char* file, int line, const char* func
+) {
     std::lock_guard<std::mutex> lock(log_lock);
     std::ofstream file_out;
     if (file_path != "%") {
@@ -53,10 +56,10 @@ void Log::err(const std::string& msg, errlevel level, int exitcode) {
     auto now = std::chrono::system_clock::now();
     auto in_time_t = std::chrono::system_clock::to_time_t(now);
     //Write the results.
-    std::cout << title << __FILE__ << ": line " << __LINE__ << " in " << __func__ << std::endl;
+    std::cout << title << file << ": line " << line << " in " << func << std::endl;
     std::cout << "Msg: " << msg << std::endl;
     if (file_out.is_open()) {
-        file_out << title << __FILE__ << ": line " << __LINE__ << " in " << __func__ << std::endl;
+        file_out << title << file << ": line " << line << " in " << func << std::endl;
         file_out << "Msg: " << msg << std::endl;
     }
     //Write log timestamp.
