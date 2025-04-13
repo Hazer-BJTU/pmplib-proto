@@ -15,9 +15,14 @@ set(SRC
     ${PROJECT_SOURCE_DIR}/src/ThreadPool.cpp
 )
 
+set(HEAD
+    ${PROJECT_SOURCE_DIR}/include/TaskHandler
+)
+
 add_compile_options(-O2)
 
 add_library(rpc1k SHARED ${SRC})
+include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 add_executable(example main.cpp)

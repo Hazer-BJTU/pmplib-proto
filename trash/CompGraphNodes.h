@@ -12,7 +12,7 @@ namespace rpc1k {
 class CompReign;
 class ThreadPool;
 
-class GraphNode {
+class GraphNode: public std::enable_shared_from_this<GraphNode> {
 public:
     std::vector<std::weak_ptr<GraphNode>> post, pre;
     std::vector<std::weak_ptr<BasicNum>> input;
@@ -30,7 +30,19 @@ public:
     void unbind();
     void set(int idx);
     void activate();
+    int add_condition();
     virtual void run() = 0;
+};
+
+class ConstantNode: public GraphNode {
+public:
+    ConstantNode();
+    ConstantNode(std::string str);
+    ~ConstantNode();
+    ConstantNode(const ConstantNode&) = delete;
+    ConstantNode& operator = (const ConstantNode&) = delete;
+    const std::shared_ptr<BasicNum>& getNum();
+    void run() override;
 };
 
 }
