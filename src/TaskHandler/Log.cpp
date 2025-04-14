@@ -77,8 +77,12 @@ void Log::err(
         std::cout << "Program quited." << std::endl;
         if (file_out.is_open()) {
             file_out << "Program quited." << std::endl;
+            file_out.close();
         }
         std::exit(exitcode);
+    }
+    if (file_out.is_open()) {
+        file_out.close();
     }
     return;
 }

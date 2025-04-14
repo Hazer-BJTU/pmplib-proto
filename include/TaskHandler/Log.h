@@ -9,25 +9,32 @@
 #include <chrono>
 #include <iomanip>
 
-#define __START_LOG_DEBUG__ do {           \
-    auto& log = Log::get_global_log();     \
-    log.start_debug();                     \
-} while(false);
-
-#define __END_LOG_DEBUG__ do {             \
-    auto& log = Log::get_global_log();     \
-    log.end_debug();                       \
-} while(false);
-
-#define AUTOLOG(msg, level, exitcode) do { \
-    auto& log = Log::get_global_log();     \
-    log.err(                               \
-        msg, level, exitcode,              \
-        __FILE__, __LINE__, __func__       \
-    );                                     \
+#define __START_LOG_DEBUG__ do {                \
+    auto& log = ::rpc1k::Log::get_global_log(); \
+    log.start_debug();                          \
 } while(false)
 
-#define FREELOG(msg, level) AUTOLOG(msg, level, ERROR_NO_ERROR)
+#define __END_LOG_DEBUG__ do {                  \
+    auto& log = ::rpc1k::Log::get_global_log(); \
+    log.end_debug();                            \
+} while(false)
+
+#define REDIRECT_LOG(file_path) do {            \
+    auto& log = ::rpc1k::Log::get_global_log(); \
+    log.change_file_path(file_path);            \
+} while(false)
+
+#define AUTOLOG(msg, level, exitcode) do {      \
+    auto& log = ::rpc1k::Log::get_global_log(); \
+    log.err(                                    \
+        msg, level, exitcode,                   \
+        __FILE__, __LINE__, __func__            \
+    );                                          \
+} while(false)
+
+#define __NO_RUNTIME_LOG__ REDIRECT_LOG("%")
+
+#define FREELOG(msg, level) AUTOLOG(msg, level, ::rpc1k::ERROR_NO_ERROR)
 
 namespace rpc1k {
 
@@ -50,11 +57,12 @@ namespace rpc1k {
  * Set filename to "%" to disable file logging.
  * 
  * @author Hazer
- * @last_modified 2025/04/13
+ * @last_modified 2025/04/14
  */
 
 static constexpr int ERROR_NO_ERROR = 0;
-static constexpr int ERROR_WRONG_ORDER = 100;
+static constexpr int ERROR_UNKNOWN_ERROR = 100;
+static constexpr int ERROR_WRONG_ORDER = 112;
 static constexpr const char* DEFAULT_LOG_FILE = "runtime_log.txt";
 enum errlevel {DEBUG, WARNING, ERROR};
 
