@@ -33,10 +33,10 @@ ThreadPool::SubGroup::SubGroup(): end_flag(false), num_active_threads(0) {}
 ThreadPool::SubGroup::~SubGroup() {}
 
 bool ThreadPool::SubGroup::quit() {
-    if (end_flag.load()) {
+    if (end_flag.load(std::memory_order_acquire)) {
         return false;
     } else {
-        end_flag.store(true);
+        end_flag.store(true, std::memory_order_release);
         cv_not_empty.notify_all();
         return true;
     }
@@ -44,7 +44,7 @@ bool ThreadPool::SubGroup::quit() {
 
 void ThreadPool::SubGroup::wait() {
     std::unique_lock<std::mutex> lock(q_lock);
-    cv_all_done.wait(lock, [this]() -> bool {return num_active_threads.load() == 0 && task_q.empty();});
+    cv_all_done.wait(lock, [this]() -> bool {return num_active_threads.load(std::memory_order_acquire) == 0 && task_q.empty();});
     return;
 }
 
@@ -67,9 +67,7 @@ ThreadPool::ThreadPool() {
                     {
                         //In this block, we will try to grab a task from group.
                         std::unique_lock<std::mutex> lock(group.q_lock);
-                        group.cv_not_empty.wait(lock, [this, &group]() -> bool {
-                            return !group.task_q.empty() || group.end_flag.load();
-                        });
+                        group.cv_not_empty.wait(lock, [this, &group]() -> bool {return !group.task_q.empty() || group.end_flag.load(std::memory_order_acquire);});
                         if (!group.task_q.empty()) {
                             task_ptr = std::move(group.task_q.front());
                             group.task_q.pop();
@@ -81,9 +79,9 @@ ThreadPool::ThreadPool() {
                     group.cv_not_full.notify_one();
                     //Now we have the task.
                     if (task_ptr) {
-                        group.num_active_threads.fetch_add(1);
+                        group.num_active_threads.fetch_add(1, std::memory_order_release);
                         task_ptr->run();
-                        group.num_active_threads.fetch_sub(1);
+                        group.num_active_threads.fetch_sub(1, std::memory_order_release);
                     } else {
                         FREELOG("Unexpected modification of unfinished task!", errlevel::WARNING);
                     }
@@ -129,11 +127,12 @@ bool ThreadPool::set_global_taskHandler_config(int total_workers, int num_groups
             FREELOG("The number of workers is higher than the maximum number of logical threads.", errlevel::DEBUG);
         }
         ThreadPool::total_workers = total_workers;
+        ThreadPool::max_tasks = max_tasks;
         if (num_groups > ThreadPool::total_workers) {
             FREELOG("Queue number is higher than the number of workers. Configuration not recommended!", errlevel::WARNING);
+            return false;
         }
         ThreadPool::num_groups = num_groups;
-        ThreadPool::max_tasks = max_tasks;
         return true;
     }
 }
