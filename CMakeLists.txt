@@ -4,6 +4,7 @@ project(RPC-1K VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
@@ -22,7 +23,7 @@ set(
     ${PROJECT_SOURCE_DIR}/test/TaskHandler/logtest.cpp
 )
 
-add_compile_options(-O2)
+add_compile_options(-O3)
 
 include_directories(${INC})
 add_library(rpc1k SHARED ${SRC})
