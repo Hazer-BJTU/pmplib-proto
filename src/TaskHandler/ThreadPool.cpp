@@ -2,11 +2,15 @@
 
 namespace rpc1k {
 
-thread_local std::mt19937 Task::gen(DEFAULT_RANDOM_SEED);
+thread_local std::random_device Task::rd;
+thread_local std::mt19937 Task::gen(rd());
 thread_local std::uniform_int_distribution<int> Task::udist(UDIST_LOWER_BOUND, UDIST_UPPER_BOUND);
 
 Task::Task() {
-    task_idx = udist(gen);
+    if (!ThreadPool::instance_created()) {
+        AUTOLOG("It is not allowed to create tasks before the thread instance is created!", errlevel::ERROR, ERROR_WRONG_ORDER);
+    }
+    task_idx = udist(gen) % ThreadPool::get_num_groups();
 }
 
 Task::~Task() {}
@@ -21,7 +25,7 @@ int Task::get_task_idx() const {
 
 bool ThreadPool::created = false;
 int ThreadPool::total_workers = std::thread::hardware_concurrency();
-int ThreadPool::num_groups = std::min(DEFAULT_QUEUE_NUM, ThreadPool::total_workers);
+int ThreadPool::num_groups = std::max(1, ThreadPool::total_workers / 2);
 int ThreadPool::max_tasks = MAX_QUEUE_LENGTH;
 
 ThreadPool::SubGroup::SubGroup(): end_flag(false), num_active_threads(0) {}
@@ -103,6 +107,14 @@ ThreadPool::~ThreadPool() {
     }
 }
 
+bool ThreadPool::instance_created() {
+    return created;
+}
+
+int ThreadPool::get_num_groups() {
+    return num_groups;
+}
+
 bool ThreadPool::set_global_taskHandler_config(int total_workers, int num_groups, int max_tasks) {
     if (created) {
         FREELOG("Configurations may not work because the instance has already been created!", errlevel::WARNING);
@@ -134,7 +146,7 @@ ThreadPool& ThreadPool::get_global_taskHandler() {
 
 void ThreadPool::enqueue(const std::shared_ptr<Task>& task_ptr) {
     int task_idx = task_ptr->get_task_idx();
-    auto& group = *groups[task_idx % num_groups];
+    auto& group = *groups[task_idx];
     {
         //In this block, we will try to add a new task to the queue.
         std::unique_lock<std::mutex> lock(group.q_lock);

@@ -7,21 +7,23 @@
 
 class MMtask: public rpc1k::Task {
 public:
-    int row;
+    int starting, ending;
     double *A, *B, *C;
-    MMtask(double *A, double *B, double *C, int row): Task() {
+    MMtask(double *A, double *B, double *C, int starting, int ending): Task() {
         this->A = A;
         this->B = B;
         this->C = C;
-        this->row = row;
+        this->starting = starting;
+        this->ending = ending;
     }
     ~MMtask() {}
     void run() override {
-        int i = row;
-        for (int j = 0; j < MAXN; j++) {
-            C[i * MAXN + j] = 0.0;
-            for (int k = 0; k < MAXN; k++) {
-                C[i * MAXN + j] += A[i * MAXN + k] * B[k * MAXN + j];
+        for (int i = starting; i < ending; i++) {
+            for (int j = 0; j < MAXN; j++) {
+                C[i * MAXN + j] = 0.0;
+                for (int k = 0; k < MAXN; k++) {
+                    C[i * MAXN + j] += A[i * MAXN + k] * B[k * MAXN + j];
+                }
             }
         }
         return;
@@ -45,13 +47,11 @@ int main() {
     fillWithRandomDoubles(A, MAXN * MAXN);
     fillWithRandomDoubles(B, MAXN * MAXN);
     std::vector<std::shared_ptr<MMtask>> mmt;
-    for (int i = 0; i < MAXN; i++) {
-        mmt.emplace_back(std::make_shared<MMtask>(A, B, C1, i));
-    }
-
-    SET_PARALLEL(16, 8, 1024);
 
     auto& threadpool = rpc1k::ThreadPool::get_global_taskHandler();
+    for (int i = 0; i < MAXN; i += 4) {
+        mmt.emplace_back(std::make_shared<MMtask>(A, B, C1, i, i + 4));
+    }
     auto start = std::chrono::high_resolution_clock::now();
     for (auto& task_ptr: mmt) {
         threadpool.enqueue(task_ptr);
@@ -79,5 +79,9 @@ int main() {
         diff += (C1[i] - C2[i]) * (C1[i] - C2[i]);
     }
     std::cout << "Difference: " << diff << std::endl;
+    std::free(A);
+    std::free(B);
+    std::free(C1);
+    std::free(C2);
     return 0;
 }

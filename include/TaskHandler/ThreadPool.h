@@ -14,12 +14,12 @@
 
 namespace rpc1k {
 
-static constexpr int DEFAULT_RANDOM_SEED = 42;
 static constexpr int UDIST_LOWER_BOUND = 0;
 static constexpr int UDIST_UPPER_BOUND = 255;
 
 class Task {
 private:
+    static thread_local std::random_device rd;
     static thread_local std::mt19937 gen;
     static thread_local std::uniform_int_distribution<int> udist;
     int task_idx;
@@ -32,8 +32,7 @@ public:
     int get_task_idx() const;
 };
 
-static constexpr int MAX_QUEUE_LENGTH = 1024;
-static constexpr int DEFAULT_QUEUE_NUM = 4;
+static constexpr int MAX_QUEUE_LENGTH = 512;
 
 class ThreadPool {
 private:
@@ -64,6 +63,8 @@ private:
     ThreadPool(const ThreadPool&) = delete;
     ThreadPool& operator = (const ThreadPool&) = delete;
 public:
+    static bool instance_created();
+    static int get_num_groups();
     static bool set_global_taskHandler_config(int total_workers, int num_groups, int max_tasks);
     static ThreadPool& get_global_taskHandler();
     void enqueue(const std::shared_ptr<Task>& task_ptr);

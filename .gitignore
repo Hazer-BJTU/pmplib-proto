@@ -1,4 +1,5 @@
-bin/
-build/
-lib/
-trash/
+bin/*
+build/*
+lib/*
+trash/*
+.vscode/*
