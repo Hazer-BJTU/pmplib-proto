@@ -1,5 +1,7 @@
 #include "ThreadPool.h"
 #include <chrono>
+#include <cstdlib>
+#include <memory>
 
 #define MAXN 1000
 
@@ -33,9 +35,13 @@ void fillWithRandomDoubles(double* arr, size_t size, double min = 0.0, double ma
     std::generate(arr, arr + size, [&]() { return dist(gen); });
 }
 
-double A[MAXN * MAXN], B[MAXN * MAXN], C1[MAXN * MAXN], C2[MAXN * MAXN];
+double *A, *B, *C1, *C2;
 
 int main() {
+    A = (double*)std::aligned_alloc((size_t)64, sizeof(double) * MAXN * MAXN);
+    B = (double*)std::aligned_alloc((size_t)64, sizeof(double) * MAXN * MAXN);
+    C1 = (double*)std::aligned_alloc((size_t)64, sizeof(double) * MAXN * MAXN);
+    C2 = (double*)std::aligned_alloc((size_t)64, sizeof(double) * MAXN * MAXN);
     fillWithRandomDoubles(A, MAXN * MAXN);
     fillWithRandomDoubles(B, MAXN * MAXN);
     std::vector<std::shared_ptr<MMtask>> mmt;
@@ -43,8 +49,10 @@ int main() {
         mmt.emplace_back(std::make_shared<MMtask>(A, B, C1, i));
     }
 
-    auto start = std::chrono::high_resolution_clock::now();
+    SET_PARALLEL(16, 8, 1024);
+
     auto& threadpool = rpc1k::ThreadPool::get_global_taskHandler();
+    auto start = std::chrono::high_resolution_clock::now();
     for (auto& task_ptr: mmt) {
         threadpool.enqueue(task_ptr);
     }
@@ -65,9 +73,10 @@ int main() {
     end = std::chrono::high_resolution_clock::now();
     total_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
     std::cout << "Single thread done. Time consumed: " << total_time << std::endl;
+
     double diff = 0.0;
     for (int i = 0; i < MAXN * MAXN; i++) {
-        diff += std::fabs(C1[i] - C2[i]);
+        diff += (C1[i] - C2[i]) * (C1[i] - C2[i]);
     }
     std::cout << "Difference: " << diff << std::endl;
     return 0;
