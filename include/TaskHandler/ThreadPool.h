@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <condition_variable>
 
+#define SET_PARALLEL(total_workers, num_groups, max_tasks) ::rpc1k::ThreadPool::set_global_taskHandler_config(total_workers, num_groups, max_tasks)
+
 namespace rpc1k {
 
 static constexpr int DEFAULT_RANDOM_SEED = 42;
@@ -30,7 +32,7 @@ public:
     int get_task_idx() const;
 };
 
-static constexpr int MAX_QUEUE_LENGTH = 256;
+static constexpr int MAX_QUEUE_LENGTH = 1024;
 static constexpr int DEFAULT_QUEUE_NUM = 4;
 
 class ThreadPool {

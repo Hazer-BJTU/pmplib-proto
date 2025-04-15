@@ -21,6 +21,7 @@ set(
 set(
     TEST
     ${PROJECT_SOURCE_DIR}/test/TaskHandler/logtest.cpp
+    ${PROJECT_SOURCE_DIR}/test/TaskHandler/threadpooltest.cpp
 )
 
 add_compile_options(-O3)
