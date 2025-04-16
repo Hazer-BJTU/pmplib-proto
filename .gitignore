@@ -1,5 +1,6 @@
-bin/*
-build/*
-lib/*
-trash/*
-.vscode/*
+bin/
+build/
+lib/
+trash/
+.vscode/
+.idea/
