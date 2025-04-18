@@ -38,7 +38,7 @@
 
 namespace rpc1k {
 
-/*
+/**
  * @brief A simple logging class for multi-threaded environments.
  * 
  * This logger helps debug and handle errors that cannot be caught by try-catch blocks.
@@ -57,12 +57,13 @@ namespace rpc1k {
  * Set filename to "%" to disable file logging.
  * 
  * @author Hazer
- * @last_modified 2025/04/14
+ * @date 2025/04/17
  */
 
 static constexpr int ERROR_NO_ERROR = 0;
 static constexpr int ERROR_UNKNOWN_ERROR = 100;
-static constexpr int ERROR_WRONG_ORDER = 112;
+static constexpr int ERROR_WRONG_ORDER = 101;
+static constexpr int ERROR_INVALID_ARGUMENT = 102;
 static constexpr const char* DEFAULT_LOG_FILE = "runtime_log.txt";
 enum errlevel {DEBUG, WARNING, ERROR};
 

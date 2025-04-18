@@ -1,6 +1,6 @@
 #include "ThreadPool.h"
+#include "Prememory.h"
 #include <chrono>
-#include <cstdlib>
 #include <memory>
 
 #define MAXN 1000
@@ -40,10 +40,10 @@ void fillWithRandomDoubles(double* arr, size_t size, double min = 0.0, double ma
 double *A, *B, *C1, *C2;
 
 int main() {
-    A = (double*)std::aligned_alloc((size_t)64, sizeof(double) * MAXN * MAXN);
-    B = (double*)std::aligned_alloc((size_t)64, sizeof(double) * MAXN * MAXN);
-    C1 = (double*)std::aligned_alloc((size_t)64, sizeof(double) * MAXN * MAXN);
-    C2 = (double*)std::aligned_alloc((size_t)64, sizeof(double) * MAXN * MAXN);
+    A = reinterpret_cast<double*>(rpc1k::aligned_alloc((size_t)64, sizeof(double) * MAXN * MAXN));
+    B = reinterpret_cast<double*>(rpc1k::aligned_alloc((size_t)64, sizeof(double) * MAXN * MAXN));
+    C1 = reinterpret_cast<double*>(rpc1k::aligned_alloc((size_t)64, sizeof(double) * MAXN * MAXN));
+    C2 = reinterpret_cast<double*>(rpc1k::aligned_alloc((size_t)64, sizeof(double) * MAXN * MAXN));
     fillWithRandomDoubles(A, MAXN * MAXN);
     fillWithRandomDoubles(B, MAXN * MAXN);
     std::vector<std::shared_ptr<MMtask>> mmt;
@@ -79,9 +79,9 @@ int main() {
         diff += (C1[i] - C2[i]) * (C1[i] - C2[i]);
     }
     std::cout << "Difference: " << diff << std::endl;
-    std::free(A);
-    std::free(B);
-    std::free(C1);
-    std::free(C2);
+    rpc1k::aligned_free(A);
+    rpc1k::aligned_free(B);
+    rpc1k::aligned_free(C1);
+    rpc1k::aligned_free(C2);
     return 0;
 }

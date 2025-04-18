@@ -17,7 +17,7 @@ namespace rpc1k {
 static constexpr int UDIST_LOWER_BOUND = 0;
 static constexpr int UDIST_UPPER_BOUND = 255;
 
-/*
+/**
  * This is a thread pool task interface (base class) with a thread_local random number generator,
  * using random_device to obtain true random seeds. 
  * 
@@ -28,8 +28,8 @@ static constexpr int UDIST_UPPER_BOUND = 255;
  * To implement a task subclass, you MUST override the following function:
  *     virtual void run();
  * 
- * @Author: Hazer
- * @Last modified: 2025/4/15
+ * @author: Hazer
+ * @date: 2025/04/17
  */
 class Task {
 private:
@@ -48,7 +48,7 @@ public:
 
 static constexpr int MAX_QUEUE_LENGTH = 512;
 
-/*​
+/**
  * The global thread pool consists of multiple independent SubGroups and 
  * centrally manages all workers, implemented using the Meyers' Singleton pattern.
  * 
@@ -63,6 +63,8 @@ static constexpr int MAX_QUEUE_LENGTH = 512;
  * 
  * Implementation note:
  * - The logging class (Log.h) used is thread-safe
+ * @author Hazer
+ * @date 2025/4/17
  */
 class ThreadPool {
 private:
