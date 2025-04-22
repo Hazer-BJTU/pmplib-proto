@@ -33,7 +33,7 @@ void aligned_free(void* ptr) {
     return;
 }
 
-std::unique_ptr<SegmentAllocator> SegmentAllocator::segment_allocator_instance(std::make_unique<SegmentAllocator>());
+std::unique_ptr<SegmentAllocator> SegmentAllocator::segment_allocator_instance(new SegmentAllocator());
 
 SegmentAllocator& SegmentAllocator::get_global_allocator() {
     return *segment_allocator_instance;

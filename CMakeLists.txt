@@ -6,27 +6,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/lib")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(
-    INC
-    ${PROJECT_SOURCE_DIR}/include/TaskHandler
-    ${PROJECT_SOURCE_DIR}/include/Core
-)
-set(
-    SRC
-    ${PROJECT_SOURCE_DIR}/src/TaskHandler/ThreadPool.cpp
-    ${PROJECT_SOURCE_DIR}/src/TaskHandler/Log.cpp
-    ${PROJECT_SOURCE_DIR}/src/Core/Prememory.cpp
-)
-set(
-    TEST
-    ${PROJECT_SOURCE_DIR}/test/TaskHandler/logtest.cpp
-    ${PROJECT_SOURCE_DIR}/test/TaskHandler/threadpooltest.cpp
-    ${PROJECT_SOURCE_DIR}/test/Core/prememory.cpp
-)
+file(GLOB INC LIST_DIRECTORIES True "${PROJECT_SOURCE_DIR}/include/*")
+file(GLOB_RECURSE SRC "${PROJECT_SOURCE_DIR}/src/*.cpp")
+file(GLOB_RECURSE TEST "${PROJECT_SOURCE_DIR}/test/*.cpp")
 
 add_compile_options(-O3)
 

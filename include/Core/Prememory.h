@@ -49,7 +49,7 @@ static constexpr int VECTOR_RESERVATION = 1024;
  * - Compaction releases excess unused segments while maintaining RESERVATION
  *
  * @note All public methods are thread-safe.
- * @warning Users must not manually free the obtained segments - use release() instead.
+ * @warning Users must not manually free the obtained segments - use free() instead.
  *
  * @author Hazer
  * @date 2025/04/18
@@ -66,11 +66,29 @@ private:
     SegmentAllocator(const SegmentAllocator&) = delete;
     SegmentAllocator& operator = (const SegmentAllocator&) = delete;
     int expand();
-public:
-    static SegmentAllocator& get_global_allocator();
     uint8_t* request();
     bool release(uint8_t* target);
+    friend class std::default_delete<SegmentAllocator>;
+public:
+    static SegmentAllocator& get_global_allocator();
     int compact();
+    template<class T>
+    void assign(T& ptr);
+    template<class T>
+    bool free(T& ptr);
 };
+
+template<class T>
+void SegmentAllocator::assign(T& ptr) {
+    ptr = reinterpret_cast<T>(request());
+    return;
+}
+
+template<class T>
+bool SegmentAllocator::free(T& ptr) {
+    auto uint_ptr = reinterpret_cast<uint8_t*>(ptr);
+    ptr = nullptr;
+    return release(uint_ptr);
+}
 
 }
