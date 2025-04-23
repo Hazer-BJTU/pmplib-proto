@@ -15,8 +15,6 @@ int main() {
     auto& segment_allocator = ::rpc1k::SegmentAllocator::get_global_allocator();
     for (int i = 0; i < MAXN; i++) {
         segment_allocator.assign(arr[i]);
-    }
-    for (int i = 0; i < MAXN; i++) {
         for (int j = 0; j < MAXM; j++) {
             arr[i][j] = gen();
             brr[i][j] = arr[i][j];
@@ -24,11 +22,13 @@ int main() {
     }
     for (int i = 0; i < MAXN; i++) {
         if (udist(gen) == 1) {
-            segment_allocator.free(arr[i]);
+            bool flag = segment_allocator.free(arr[i]);
+            assert(flag == true);
         }
     }
     bool flag = true;
-    segment_allocator.compact();
+    int cnt = segment_allocator.compact();
+    std::cout << cnt << " segments released." << std::endl;
     for (int i = 0; i < MAXN; i++) {
         if (arr[i]) {
             for (int j = 0; j < MAXM; j++) {
@@ -36,6 +36,16 @@ int main() {
             }
         }
     }
+    for (int i = 0; i < MAXN; i++) {
+        if (!arr[i]) {
+            segment_allocator.assign(arr[i]);
+            for (int j = 0; j < MAXM; j++) {
+                arr[i][j] = gen();
+            }
+        }
+    }
+    cnt = segment_allocator.compact();
+    std::cout << cnt << " segments released." << std::endl;
     std::cout << "Test complete." << std::endl;
     return 0;
 }
