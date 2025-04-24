@@ -13,13 +13,13 @@ static constexpr int BASE = 1e8;
 static constexpr int LGBASE = 8;
 static constexpr int ZERO = LENGTH / 2 - 1;
 
-class RealReader;
+class RealParser;
 
 class BaseNum {
 private:
     bool sign;
     int64* data;
-    friend RealReader;
+    friend RealParser;
 public:
     BaseNum();
     ~BaseNum();
