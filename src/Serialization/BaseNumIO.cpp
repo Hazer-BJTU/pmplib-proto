@@ -97,6 +97,7 @@ int RealParser::str2int(std::string& str) {
 
 int RealParser::locate(int& x, int power) {
     if (power >= 0) {
+        //We should locate the value to the right position in data array.
         int idx = power / LGBASE, remain = power % LGBASE;
         for (int i = 0; i < remain; i++) {
             //We need to adjust the digit to the right position between 00000000 ~ 99999999
@@ -104,6 +105,8 @@ int RealParser::locate(int& x, int power) {
         }
         return ZERO + idx;
     } else {
+        //We should locate the value to the right position in data array.
+        //The calculation of negative power is different from that of positive power.
         int idx = (-power - 1) / LGBASE + 1;
         int remain = LGBASE - 1 - ((-power - 1) % LGBASE);
         for (int i = 0; i < remain; i++) {
@@ -142,6 +145,9 @@ void RealParser::write() noexcept {
     }
     if (src.back() == '.') {
         src.pop_back();
+    }
+    if (src == "-0") {
+        src = "0";
     }
     return;
 }
