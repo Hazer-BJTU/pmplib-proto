@@ -2,4 +2,4 @@ rm -rf bin/tests/*
 rm -rf build/*
 cd build
 cmake ..
-make
+make -j$(nproc)

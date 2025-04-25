@@ -11,6 +11,9 @@ const char* NumberFormatError::what() const noexcept {
 }
 
 void RealParser::read() {
+    if (!dst) {
+        throw NumberFormatError("Dangling pointer!");
+    }
     //Clear the number value.
     memset(dst->data, 0, LENGTH * sizeof(int64));
     //Check if the input string is empty.
@@ -117,7 +120,10 @@ int RealParser::locate(int& x, int power) {
     }
 }
 
-void RealParser::write() noexcept {
+void RealParser::write(){
+    if (!dst) {
+        throw NumberFormatError("Dangling pointer!");
+    }
     std::stringstream ss;
     int left = 0, right = LENGTH - 1;
     while(dst->data[left] == 0 && left + 1 < ZERO) {
@@ -163,18 +169,145 @@ bool RealParser::operator () (const std::shared_ptr<BaseNum>& num, const std::st
         read();
     } catch(NumberFormatError& e) {
         std::stringstream log_msg;
-        log_msg << "(Initialize number format error): " << e.what() << " Initialize to zero by default.";
+        log_msg << "(Initialize number format error): " << e.what() << " Initialization may be incorrect.";
         FREELOG(log_msg.str(), errlevel::WARNING);
+        dst = nullptr;
         return false;
     }
+    dst = nullptr;
     return true;
 }
 
 const std::string& RealParser::operator () (const std::shared_ptr<BaseNum>& num) {
     src = "";
     dst = num;
-    write();
+    try {
+        write();
+    } catch(NumberFormatError& e) {
+        std::stringstream log_msg;
+        log_msg << "(Parse error): " << e.what() << " Return empty string.";
+        FREELOG(log_msg.str(), errlevel::WARNING);
+        dst = nullptr;
+        src = "";
+        return src;
+    }
+    dst = nullptr;
     return src;
+}
+
+void RealParser::write_to_file(std::ofstream& stream, io mode) {
+    if (!dst) {
+        throw NumberFormatError("Dangling pointer!");
+    }
+    if (!stream.is_open()) {
+        throw NumberFormatError("File not open!");
+    }
+    if (mode == io::csv) {
+        stream << "Data_length, " << LENGTH << '\n';
+        stream << "Base, " << BASE << '\n';
+        stream << "Default_io_base, " << DEFAULT_INPUT_BASE << '\n';
+        stream << "Sign, " << dst->sign << '\n';
+        for (int i = LENGTH - 1; i >= 0; i--) {
+            stream << i - ZERO << ", " << dst->data[i] << '\n';
+        }
+    } else if (mode == io::binary) {
+        stream.write(reinterpret_cast<const char*>(&LENGTH), sizeof(LENGTH));
+        stream.write(reinterpret_cast<const char*>(&BASE), sizeof(BASE));
+        stream.write(reinterpret_cast<const char*>(&DEFAULT_INPUT_BASE), sizeof(DEFAULT_INPUT_BASE));
+        stream.write(reinterpret_cast<const char*>(&(dst->sign)), sizeof(bool));
+        stream.write(reinterpret_cast<const char*>(dst->data), LENGTH * sizeof(int64));
+    }
+    return;
+}
+
+void RealParser::read_from_file(std::ifstream& stream, io mode) {
+    if (!dst) {
+        throw NumberFormatError("Dangling pointer!");
+    }
+    if (!stream.is_open()) {
+        throw NumberFormatError("File not open!");
+    }
+    if (mode == io::csv) {
+        std::string key;
+        int64 value;
+        while (stream >> key) {
+            try {
+                stream >> value;
+            } catch(std::exception &e) {
+                throw NumberFormatError(e.what());
+            }
+            if (key == "Data_length,") {
+                if (value != LENGTH) {
+                    throw NumberFormatError("Wrong data length!");
+                }
+            } else if (key == "Base,") {
+                if (value != BASE) {
+                    throw NumberFormatError("Wrong base!");
+                }
+            } else if (key == "Default_io_base,") {
+                if (value != DEFAULT_INPUT_BASE) {
+                    throw NumberFormatError("Wrong io base!");
+                }
+            } else if (key == "Sign,") {
+                dst->sign = static_cast<bool>(value);
+            } else {
+                int idx;
+                try {
+                    key.pop_back();
+                    idx = std::stoi(key);
+                } catch(std::exception &e) {
+                    throw NumberFormatError(e.what());
+                }
+                dst->data[idx + ZERO] = value;
+            }
+        }
+    } else if (mode == io::binary) {
+        size_t length;
+        int base, default_io_base;
+        stream.read(reinterpret_cast<char*>(&length), sizeof(LENGTH));
+        stream.read(reinterpret_cast<char*>(&base), sizeof(BASE));
+        stream.read(reinterpret_cast<char*>(&default_io_base), sizeof(DEFAULT_INPUT_BASE));
+        if (length != LENGTH) {
+            throw NumberFormatError("Wrong data length!");
+        } else if (base != BASE) {
+            throw NumberFormatError("Wrong base!");
+        } else if (default_io_base != DEFAULT_INPUT_BASE) {
+            throw NumberFormatError("Wrong io base!");
+        }
+        stream.read(reinterpret_cast<char*>(&(dst->sign)), sizeof(bool));
+        stream.read(reinterpret_cast<char*>(dst->data), LENGTH * sizeof(int64));
+    }
+    return;
+}
+
+std::ofstream& RealParser::operator () (const std::shared_ptr<BaseNum>& num, std::ofstream& stream, io mode) {
+    dst = num;
+    try {
+        write_to_file(stream, mode);
+    } catch(NumberFormatError& e) {
+        std::stringstream log_msg;
+        log_msg << "(File IO error): " << e.what() << " Output may be incorrect.";
+        FREELOG(log_msg.str(), errlevel::WARNING);
+        dst = nullptr;
+        return stream;
+    }
+    dst = nullptr;
+    return stream;
+}
+
+std::ifstream& RealParser::operator () (const std::shared_ptr<BaseNum>& num, std::ifstream& stream, io mode) {
+    dst = num;
+    try {
+        read_from_file(stream, mode);
+    } catch(NumberFormatError& e) {
+        std::stringstream log_msg;
+        log_msg << "(File IO error): " << e.what() << " Input may be incorrect.";
+        FREELOG(log_msg.str(), errlevel::WARNING);
+        dst = nullptr;
+        return stream;
+    }
+    dst = nullptr;
+    return stream;
 }
 
 }

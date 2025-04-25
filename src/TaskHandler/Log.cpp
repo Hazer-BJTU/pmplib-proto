@@ -41,15 +41,15 @@ void Log::err(
         file_out.open(file_path, std::ios::app);
     }
     std::string title("");
-    if (level == DEBUG) {
+    if (level == errlevel::ERROR) {
         if (!enable_debug) {
             //Skip logging if debug mode is not enabled.
             return;
         }
         title.append("[DEBUG] ");
-    } else if (level == WARNING) {
+    } else if (level == errlevel::WARNING) {
         title.append("[WARNING] ");
-    } else if (level == ERROR){
+    } else if (level == errlevel::ERROR){
         title.append("[ERROR] ");
     }
     //Get current time.
@@ -73,7 +73,7 @@ void Log::err(
         file_out << "Thread ID: " << std::this_thread::get_id() << std::endl;
     }
     //If error level reaches ERROR, the program will quit.
-    if (level == ERROR) {
+    if (level == errlevel::ERROR) {
         std::cout << "Program quited." << std::endl;
         if (file_out.is_open()) {
             file_out << "Program quited." << std::endl;

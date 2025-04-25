@@ -65,7 +65,7 @@ static constexpr int ERROR_UNKNOWN_ERROR = 100;
 static constexpr int ERROR_WRONG_ORDER = 101;
 static constexpr int ERROR_INVALID_ARGUMENT = 102;
 static constexpr const char* DEFAULT_LOG_FILE = "runtime_log.txt";
-enum errlevel {DEBUG, WARNING, ERROR};
+enum class errlevel {DEBUG, WARNING, ERROR};
 
 class Log {
 private:

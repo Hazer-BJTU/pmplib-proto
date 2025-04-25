@@ -10,6 +10,7 @@
 #include <sstream>
 #include <climits>
 #include <iomanip>
+#include <fstream>
 
 namespace rpc1k {
 
@@ -26,6 +27,8 @@ public:
     const char* what() const noexcept override;
 };
 
+enum class io {binary, csv};
+
 class RealParser {
 private:
     std::shared_ptr<BaseNum> dst;
@@ -33,12 +36,16 @@ private:
     void read();
     int str2int(std::string& str);
     int locate(int& x, int power);
-    void write() noexcept;
+    void write();
+    void write_to_file(std::ofstream& stream, io mode);
+    void read_from_file(std::ifstream& stream, io mode);
 public:
     RealParser();
     ~RealParser();
     bool operator () (const std::shared_ptr<BaseNum>& num, const std::string& str);
     const std::string& operator () (const std::shared_ptr<BaseNum>& num);
+    std::ofstream& operator () (const std::shared_ptr<BaseNum>& num, std::ofstream& stream, io mode=io::csv);
+    std::ifstream& operator () (const std::shared_ptr<BaseNum>& num, std::ifstream& stream, io mode=io::csv);
 };
 
 }
