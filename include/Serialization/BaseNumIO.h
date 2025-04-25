@@ -35,7 +35,7 @@ private:
     std::string src;
     void read();
     int str2int(std::string& str);
-    int locate(int& x, int power);
+    int locate(int64& x, int power);
     void write();
     void write_to_file(std::ofstream& stream, io mode);
     void read_from_file(std::ifstream& stream, io mode);

@@ -64,7 +64,8 @@ void RealParser::read() {
         if (src[i] < '0' || src[i] > '9') {
             throw NumberFormatError("Invalid significand format!");
         }
-        int power = src.length() - 1 - i + bias, v = src[i] - '0';
+        int power = src.length() - 1 - i + bias;
+        int64 v = src[i] - '0';
         int idx = locate(v, power);
         if (idx >= 0 && idx < LENGTH) {
             dst->data[idx] += v;
@@ -98,7 +99,7 @@ int RealParser::str2int(std::string& str) {
     return result * sign;
 }
 
-int RealParser::locate(int& x, int power) {
+int RealParser::locate(int64& x, int power) {
     if (power >= 0) {
         //We should locate the value to the right position in data array.
         int idx = power / LGBASE, remain = power % LGBASE;
