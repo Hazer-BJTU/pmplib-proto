@@ -16,8 +16,8 @@ namespace rpc1k {
 
 using int64 = unsigned long long;
 
-static constexpr int DEFAULT_INPUT_BASE = 10;
-static constexpr int MAX_SRC_LENGTH = LENGTH * LGBASE;
+inline constexpr int DEFAULT_INPUT_BASE = 10;
+inline constexpr int MAX_SRC_LENGTH = LENGTH * LGBASE;
 
 class NumberFormatError: public std::exception {
 private:

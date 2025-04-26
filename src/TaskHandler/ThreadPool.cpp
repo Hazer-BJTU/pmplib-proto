@@ -79,9 +79,9 @@ ThreadPool::ThreadPool() {
                     group.cv_not_full.notify_one();
                     //Now we have the task.
                     if (task_ptr) {
-                        group.num_active_threads.fetch_add(1, std::memory_order_release);
+                        group.num_active_threads.fetch_add(1, std::memory_order_acq_rel);
                         task_ptr->run();
-                        group.num_active_threads.fetch_sub(1, std::memory_order_release);
+                        group.num_active_threads.fetch_sub(1, std::memory_order_acq_rel);
                     } else {
                         FREELOG("Unexpected modification of unfinished task!", errlevel::WARNING);
                     }
@@ -94,9 +94,8 @@ ThreadPool::ThreadPool() {
 
 ThreadPool::~ThreadPool() {
     wait_for_all_subgroups();
-    for (int i = 0; i < num_groups; i++) {
-        auto& group = *groups[i];
-        group.quit();
+    for (auto& group: groups) {
+        group->quit();
     }
     for (auto& thread: workers) {
         if (thread.joinable()) {
@@ -157,9 +156,8 @@ void ThreadPool::enqueue(const std::shared_ptr<Task>& task_ptr) {
 }
 
 void ThreadPool::wait_for_all_subgroups() {
-    for (int i = 0; i < num_groups; i++) {
-        auto& group = *groups[i];
-        group.wait();
+    for (auto& group: groups) {
+        group->wait();
     }
     return;
 }

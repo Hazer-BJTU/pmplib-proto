@@ -2,8 +2,8 @@
 #include <random>
 #include <cassert>
 
-static constexpr int MAXN = 1024;
-static constexpr int MAXM = 512;
+inline constexpr int MAXN = 1024;
+inline constexpr int MAXM = 512;
 using int64 = long long;
 
 int main() {

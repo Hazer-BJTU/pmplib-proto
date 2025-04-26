@@ -30,11 +30,11 @@ namespace rpc1k {
 void* aligned_alloc(size_t alignment, size_t size);
 void aligned_free(void* ptr);
 
-static constexpr size_t ALIGNMENT = 64;
-static constexpr size_t SEGMENT_SIZE = 4096; //Each segment consists of 512 unsigned long long.
-static constexpr int RESERVATION = 256;
-static constexpr int EXPAND_RATIO = 2;
-static constexpr int VECTOR_RESERVATION = 1024;
+inline constexpr size_t ALIGNMENT = 64;
+inline constexpr size_t SEGMENT_SIZE = 4096; //Each segment consists of 512 unsigned long long.
+inline constexpr int RESERVATION = 256;
+inline constexpr int EXPAND_RATIO = 2;
+inline constexpr int VECTOR_RESERVATION = 1024;
 
 /**
  * @brief Thread-safe memory allocator for fixed-size aligned memory segments.

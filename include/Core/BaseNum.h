@@ -8,10 +8,10 @@ namespace rpc1k {
 
 using int64 = unsigned long long;
 
-static constexpr size_t LENGTH = SEGMENT_SIZE / sizeof(int64);
-static constexpr int BASE = 1e8;
-static constexpr int LGBASE = 8;
-static constexpr int ZERO = LENGTH / 2 - 1;
+inline constexpr size_t LENGTH = SEGMENT_SIZE / sizeof(int64);
+inline constexpr int BASE = 1e8;
+inline constexpr int LGBASE = 8;
+inline constexpr int ZERO = LENGTH / 2 - 1;
 
 class RealParser;
 
@@ -27,6 +27,12 @@ public:
     BaseNum& operator = (const BaseNum& num);
     const int64& operator [] (int idx) const;
     bool get_sign() const;
+};
+
+class BinaryOperationGraphNode {
+private:
+    std::shared_ptr<BaseNum> out_domain, in_domain_A, in_domain_B;
+    
 };
 
 }

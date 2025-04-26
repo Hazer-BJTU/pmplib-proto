@@ -14,8 +14,8 @@
 
 namespace rpc1k {
 
-static constexpr int UDIST_LOWER_BOUND = 0;
-static constexpr int UDIST_UPPER_BOUND = 255;
+inline constexpr int UDIST_LOWER_BOUND = 0;
+inline constexpr int UDIST_UPPER_BOUND = 255;
 
 /**
  * This is a thread pool task interface (base class) with a thread_local random number generator,

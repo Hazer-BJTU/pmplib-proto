@@ -60,11 +60,11 @@ namespace rpc1k {
  * @date 2025/04/17
  */
 
-static constexpr int ERROR_NO_ERROR = 0;
-static constexpr int ERROR_UNKNOWN_ERROR = 100;
-static constexpr int ERROR_WRONG_ORDER = 101;
-static constexpr int ERROR_INVALID_ARGUMENT = 102;
-static constexpr const char* DEFAULT_LOG_FILE = "runtime_log.txt";
+inline constexpr int ERROR_NO_ERROR = 0;
+inline constexpr int ERROR_UNKNOWN_ERROR = 100;
+inline constexpr int ERROR_WRONG_ORDER = 101;
+inline constexpr int ERROR_INVALID_ARGUMENT = 102;
+inline constexpr const char* DEFAULT_LOG_FILE = "runtime_log.txt";
 enum class errlevel {DEBUG, WARNING, ERROR};
 
 class Log {
