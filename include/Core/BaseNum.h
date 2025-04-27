@@ -31,6 +31,40 @@ public:
     bool get_sign() const;
 };
 
+/**
+ * @brief Base class for computation graph nodes implementing lock-free task dependency
+ *        through atomic counters.
+ * 
+ * The computation graph processes dependencies without locks using simple atomic counters.
+ * Each node can have multiple parallelizable task workloads. The last thread to complete
+ * its workload handles the reduction task and notifies all successor nodes.
+ * 
+ * Key characteristics:
+ * - Manages its own output domain (out_domain) using shared_ptr
+ * - References predecessor outputs as input domains via shared_ptr
+ * - Supports multiple input domains but has exactly one output domain
+ * - Uses two atomic counters:
+ *   * inp_dept_counter: Tracks input dependencies
+ *   * red_dept_counter: Tracks reduction dependencies
+ * 
+ * Derived class TriggerableNode:
+ * - Can be manually activated (triggered)
+ * - Typically used for constant nodes in the DAG
+ * - Overrides is_triggerable() and adds trigger() method
+ * 
+ * The node lifecycle involves:
+ * 1. Waiting for input dependencies (inp_dept_counter)
+ * 2. Executing parallel workloads when ready
+ * 3. Performing reduction when last workload completes
+ * 4. Notifying successor nodes
+ * 
+ * Thread safety is maintained through:
+ * - Atomic operations with appropriate memory ordering (memory_order_acq_rel)
+ * - Single-threaded reduction guarantee (only last thread executes reduce())
+ * - Shared_ptr/weak_ptr for safe memory management
+ * @author Hazer
+ * @date 2025/4/27
+ */
 class GraphNode {
 private:
     //Data field.
@@ -40,9 +74,9 @@ private:
     std::atomic<int> inp_dept_counter;
     //Work field.
     std::vector<std::shared_ptr<Task>> workload;
-    std::shared_ptr<Task> reduce;
     std::atomic<int> red_dept_counter;
 protected:
+    virtual void reduce();
     void inp_count_down();
     void red_count_down();
     void notify_successors();

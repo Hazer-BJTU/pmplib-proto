@@ -42,11 +42,15 @@ bool BaseNum::get_sign() const {
     return sign;
 }
 
-GraphNode::GraphNode(): inp_dept_counter(0), red_dept_counter(0), reduce(nullptr) {
+GraphNode::GraphNode(): inp_dept_counter(0), red_dept_counter(0) {
     out_domain = std::make_shared<BaseNum>();
 }
 
 GraphNode::~GraphNode() {}
+
+void GraphNode::reduce() {
+    return;
+}
 
 void GraphNode::inp_count_down() {
     if (inp_dept_counter.fetch_sub(1, std::memory_order_acq_rel) == 1) {
@@ -64,15 +68,8 @@ void GraphNode::inp_count_down() {
 void GraphNode::red_count_down() {
     if (red_dept_counter.fetch_sub(1, std::memory_order_acq_rel) == 1) {
         //Only one thread will enter this block, so no synchronization is needed.
-        if (reduce) {
-            //There exists a reduce job.
-            auto& task_handler = ThreadPool::get_global_taskHandler();
-            task_handler.enqueue(std::move(reduce));
-            //notify_successors() will be called in reduce.
-        } else {
-            //There doesn't exist a reduce job.
-            notify_successors();
-        }
+        reduce();
+        notify_successors();
     }
     return;
 }
