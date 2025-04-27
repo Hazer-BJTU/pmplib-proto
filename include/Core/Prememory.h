@@ -76,6 +76,8 @@ public:
     void assign(T& ptr);
     template<class T>
     bool free(T& ptr);
+    template<class T>
+    bool exchange(T& ptr);
 };
 
 template<class T>
@@ -89,6 +91,14 @@ bool SegmentAllocator::free(T& ptr) {
     auto uint_ptr = reinterpret_cast<uint8_t*>(ptr);
     ptr = nullptr;
     return release(uint_ptr);
+}
+
+template<class T>
+bool SegmentAllocator::exchange(T& ptr) {
+    auto uint_ptr = reinterpret_cast<uint8_t*>(ptr);
+    bool good_free = release(uint_ptr);
+    ptr = reinterpret_cast<T>(request());
+    return good_free;
 }
 
 }

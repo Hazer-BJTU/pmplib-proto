@@ -63,6 +63,7 @@ enum class io {binary, csv};
  *    file_in.open("serialization_test.bin");
  *    parser(num2, file_in, ::rpc1k::io::binary);  // Deserialize from binary
  *    std::cout << "Read bin: " << parser(num2) << std::endl;
+ *    file_in.close();
  * @endcode
  * 
  * @note The class throws NumberFormatError for invalid input formats

@@ -64,6 +64,7 @@ inline constexpr int ERROR_NO_ERROR = 0;
 inline constexpr int ERROR_UNKNOWN_ERROR = 100;
 inline constexpr int ERROR_WRONG_ORDER = 101;
 inline constexpr int ERROR_INVALID_ARGUMENT = 102;
+inline constexpr int ERROR_COMPUTE_HALT = 103;
 inline constexpr const char* DEFAULT_LOG_FILE = "runtime_log.txt";
 enum class errlevel {DEBUG, WARNING, ERROR};
 

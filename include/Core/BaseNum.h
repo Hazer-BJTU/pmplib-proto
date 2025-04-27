@@ -1,6 +1,8 @@
 #pragma once
 
+#include "Log.h"
 #include "Prememory.h"
+#include "ThreadPool.h"
 #include <cstdlib>
 #include <cstring>
 
@@ -29,10 +31,37 @@ public:
     bool get_sign() const;
 };
 
-class BinaryOperationGraphNode {
+class GraphNode {
 private:
-    std::shared_ptr<BaseNum> out_domain, in_domain_A, in_domain_B;
-    
+    //Data field.
+    std::vector<std::weak_ptr<GraphNode>> successors, precursors;
+    std::shared_ptr<BaseNum> out_domain;
+    std::vector<std::shared_ptr<BaseNum>> input_domains;
+    std::atomic<int> inp_dept_counter;
+    //Work field.
+    std::vector<std::shared_ptr<Task>> workload;
+    std::shared_ptr<Task> reduce;
+    std::atomic<int> red_dept_counter;
+protected:
+    void inp_count_down();
+    void red_count_down();
+    void notify_successors();
+public:
+    GraphNode();
+    ~GraphNode();
+    GraphNode(const GraphNode&) = delete;
+    GraphNode& operator = (const GraphNode&) = delete;
+    virtual bool is_triggerable();
+};
+
+class TriggerableNode: public GraphNode {
+public:
+    TriggerableNode();
+    ~TriggerableNode();
+    TriggerableNode(const TriggerableNode&) = delete;
+    TriggerableNode& operator = (const TriggerableNode&) = delete;
+    bool is_triggerable() override;
+    void trigger();
 };
 
 }
