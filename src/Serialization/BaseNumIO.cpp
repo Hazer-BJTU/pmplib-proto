@@ -172,10 +172,10 @@ bool RealParser::operator () (const std::shared_ptr<BaseNum>& num, const std::st
         std::stringstream log_msg;
         log_msg << "(Initialize number format error): " << e.what() << " Initialization may be incorrect.";
         FREELOG(log_msg.str(), errlevel::WARNING);
-        dst = nullptr;
+        dst.reset();
         return false;
     }
-    dst = nullptr;
+    dst.reset();
     return true;
 }
 
@@ -188,11 +188,11 @@ const std::string& RealParser::operator () (const std::shared_ptr<BaseNum>& num)
         std::stringstream log_msg;
         log_msg << "(Parse error): " << e.what() << " Return empty string.";
         FREELOG(log_msg.str(), errlevel::WARNING);
-        dst = nullptr;
+        dst.reset();
         src = "";
         return src;
     }
-    dst = nullptr;
+    dst.reset();
     return src;
 }
 
@@ -289,10 +289,10 @@ std::ofstream& RealParser::operator () (const std::shared_ptr<BaseNum>& num, std
         std::stringstream log_msg;
         log_msg << "(File IO error): " << e.what() << " Output may be incorrect.";
         FREELOG(log_msg.str(), errlevel::WARNING);
-        dst = nullptr;
+        dst.reset();
         return stream;
     }
-    dst = nullptr;
+    dst.reset();
     return stream;
 }
 
@@ -304,10 +304,10 @@ std::ifstream& RealParser::operator () (const std::shared_ptr<BaseNum>& num, std
         std::stringstream log_msg;
         log_msg << "(File IO error): " << e.what() << " Input may be incorrect.";
         FREELOG(log_msg.str(), errlevel::WARNING);
-        dst = nullptr;
+        dst.reset();
         return stream;
     }
-    dst = nullptr;
+    dst.reset();
     return stream;
 }
 
