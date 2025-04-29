@@ -62,7 +62,9 @@ inline bool arithmetic_numerical_sub_carry(int64* A, int64* B, int64* C) {
 inline void arithmetic_numerical_multiply(int64* A, int64* B, int64* C, int starting, int ending) {
     for (int i = starting; i < ending; i++) {
         C[i] = 0ull;
-        for (int j = std::max(0, i + ZERO - (int)LENGTH + 1); j < std::min(i + ZERO + 1, (int)LENGTH); j++) {
+        int lbound = std::max(i + ZERO + 1 - (int)LENGTH, 0);
+        int rbound = std::min(i + ZERO + 1, (int)LENGTH);
+        for (int j = lbound; j < rbound; j++) {
             int k = i + ZERO - j;
             C[i] += A[j] * B[k];
         }
