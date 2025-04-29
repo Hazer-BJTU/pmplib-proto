@@ -8,6 +8,22 @@ namespace rpc1k {
 
 inline constexpr int64 DEFAULT_ARITHM_BASE = BASE;
 
+/**
+ * These are fundamental functions for high-precision numerical operations. 
+ * Since they need direct access to private data fields, they cannot be used 
+ * directly but are called by BaseNum's friend class ArithmeticGraphNode as 
+ * basic operations. All operations ignore the sign of the data!
+ * 
+ * Important implementation notes:
+ * - arithmetic_numerical_multiply implements segmented multiplication to 
+ *   improve parallelism. After calling this, arithmetic_numerical_carry must 
+ *   be called separately to calculate carries.
+ * - arithmetic_numerical_sub_carry requires checking the magnitude relation 
+ *   between operands before computation, otherwise borrow overflow may occur.
+ * 
+ * @author Hazer
+ * @date 2025/4/28
+ */
 inline int arithmetic_numerical_comp(int64* A, int64* B) {
     for (int i = LENGTH - 1; i >= 0; i--) {
         if (A[i] > B[i]) {

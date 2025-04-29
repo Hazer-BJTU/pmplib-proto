@@ -16,12 +16,14 @@ inline constexpr int LGBASE = 8;
 inline constexpr int ZERO = LENGTH / 2 - 1;
 
 class RealParser;
+class AddNode::AddTask;
 
 class BaseNum {
 private:
     bool sign;
     int64* data;
     friend RealParser;
+    friend AddNode::AddTask;
 public:
     BaseNum();
     ~BaseNum();
@@ -30,6 +32,8 @@ public:
     const int64& operator [] (int idx) const;
     bool get_sign() const;
 };
+
+class ConstantNode;
 
 /**
  * @brief Base class for computation graph nodes implementing lock-free task dependency
@@ -66,7 +70,7 @@ public:
  * @date 2025/4/27
  */
 class GraphNode {
-private:
+protected:
     //Data field.
     std::vector<std::weak_ptr<GraphNode>> successors, precursors;
     std::shared_ptr<BaseNum> out_domain;
@@ -75,11 +79,11 @@ private:
     //Work field.
     std::vector<std::shared_ptr<Task>> workload;
     std::atomic<int> red_dept_counter;
-protected:
     virtual void reduce();
     void inp_count_down();
     void red_count_down();
     void notify_successors();
+    friend ConstantNode;
 public:
     GraphNode();
     ~GraphNode();
