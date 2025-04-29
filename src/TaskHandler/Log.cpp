@@ -41,7 +41,7 @@ void Log::err(
         file_out.open(file_path, std::ios::app);
     }
     std::string title("");
-    if (level == errlevel::ERROR) {
+    if (level == errlevel::DEBUG) {
         if (!enable_debug) {
             //Skip logging if debug mode is not enabled.
             return;
