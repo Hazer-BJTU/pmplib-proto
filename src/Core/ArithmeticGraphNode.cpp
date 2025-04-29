@@ -2,6 +2,8 @@
 
 namespace rpc1k {
 
+ConstantNode::ConstantNode() {}
+
 ConstantNode::ConstantNode(const std::string num) {
     RealParser parser;
     parser(out_domain, num);
@@ -9,15 +11,15 @@ ConstantNode::ConstantNode(const std::string num) {
 
 ConstantNode::~ConstantNode() {}
 
-ConstantNode::ConstantNode(const GraphNode& node) {
-    out_domain = node.out_domain;
+ConstantNode::ConstantNode(const std::shared_ptr<GraphNode>& node) {
+    out_domain = node->out_domain;
 }
 
-ConstantNode& ConstantNode::operator = (const GraphNode& node) {
-    if (this == &node) {
+ConstantNode& ConstantNode::operator = (const std::shared_ptr<GraphNode>& node) {
+    if (this == node.get()) {
         return *this;
     }
-    out_domain = node.out_domain;
+    out_domain = node->out_domain;
     return *this;
 }
 
@@ -64,8 +66,8 @@ AddNode::AddNode() {}
 AddNode::~AddNode() {}
 
 std::shared_ptr<AddNode> AddNode::construct_add_node_from_nodes(
-    std::shared_ptr<GraphNode>& nodeA,
-    std::shared_ptr<GraphNode>& nodeB
+    const std::shared_ptr<GraphNode>& nodeA,
+    const std::shared_ptr<GraphNode>& nodeB
 ) {
     auto new_node = std::make_shared<AddNode>();
     //Initialize data field.
@@ -83,7 +85,7 @@ std::shared_ptr<AddNode> AddNode::construct_add_node_from_nodes(
             nodeA->out_domain,
             nodeB->out_domain,
             new_node->out_domain,
-            [&new_node]() {
+            [new_node]() {
                 //Call back function. Reference Guaranteed.
                 new_node->red_count_down();
             }

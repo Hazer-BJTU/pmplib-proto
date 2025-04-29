@@ -7,10 +7,13 @@ namespace rpc1k {
 
 class ConstantNode: public TriggerableNode{
 public:
+    ConstantNode();
     ConstantNode(const std::string num);
     ~ConstantNode();
-    ConstantNode(const GraphNode& node);
-    ConstantNode& operator = (const GraphNode& node);
+    ConstantNode(const GraphNode&) = delete;
+    ConstantNode& operator = (const GraphNode&) = delete;
+    ConstantNode(const std::shared_ptr<GraphNode>& node);
+    ConstantNode& operator = (const std::shared_ptr<GraphNode>& node);
 };
 
 class AddNode: public GraphNode{
@@ -45,8 +48,8 @@ public:
     AddNode();
     ~AddNode();
     static std::shared_ptr<AddNode> construct_add_node_from_nodes(
-        std::shared_ptr<GraphNode>& nodeA,
-        std::shared_ptr<GraphNode>& nodeB
+        const std::shared_ptr<GraphNode>& nodeA,
+        const std::shared_ptr<GraphNode>& nodeB
     );
     AddNode(const AddNode&) = delete;
     AddNode& operator = (const AddNode&) = delete;
