@@ -38,8 +38,16 @@ const int64& BaseNum::operator [] (int idx) const {
     return data[idx];
 }
 
+int64* BaseNum::get_data() {
+    return data;
+}
+
 bool BaseNum::get_sign() const {
     return sign;
+}
+
+bool* BaseNum::get_sign_ptr() {
+    return &sign;
 }
 
 GraphNode::GraphNode(): inp_dept_counter(0), red_dept_counter(0) {

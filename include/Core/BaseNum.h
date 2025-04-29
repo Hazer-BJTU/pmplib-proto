@@ -15,25 +15,25 @@ inline constexpr int BASE = 1e8;
 inline constexpr int LGBASE = 8;
 inline constexpr int ZERO = LENGTH / 2 - 1;
 
+class ConstantNode;
+class AddNode;
 class RealParser;
-class AddNode::AddTask;
 
 class BaseNum {
 private:
     bool sign;
     int64* data;
     friend RealParser;
-    friend AddNode::AddTask;
 public:
     BaseNum();
     ~BaseNum();
     BaseNum(const BaseNum& num);
     BaseNum& operator = (const BaseNum& num);
     const int64& operator [] (int idx) const;
+    int64* get_data();
     bool get_sign() const;
+    bool* get_sign_ptr();
 };
-
-class ConstantNode;
 
 /**
  * @brief Base class for computation graph nodes implementing lock-free task dependency
@@ -84,6 +84,8 @@ protected:
     void red_count_down();
     void notify_successors();
     friend ConstantNode;
+    friend AddNode;
+    friend RealParser;
 public:
     GraphNode();
     ~GraphNode();

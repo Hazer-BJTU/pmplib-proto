@@ -3,9 +3,7 @@
 using namespace rpc1k;
 
 int64* get_data_pointer(const std::shared_ptr<BaseNum>& num) {
-    //Dangerous operation! It is an undefined behavior.
-    int64** ptr = reinterpret_cast<int64**>(num.get());
-    return *(ptr + 1);
+    return num->get_data();
 }
 
 int main() {

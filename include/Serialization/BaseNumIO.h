@@ -86,6 +86,7 @@ public:
     ~RealParser();
     bool operator () (const std::shared_ptr<BaseNum>& num, const std::string& str);
     const std::string& operator () (const std::shared_ptr<BaseNum>& num);
+    const std::string& operator () (const std::shared_ptr<GraphNode>& node);
     std::ofstream& operator () (const std::shared_ptr<BaseNum>& num, std::ofstream& stream, io mode=io::csv);
     std::ifstream& operator () (const std::shared_ptr<BaseNum>& num, std::ifstream& stream, io mode=io::csv);
 };

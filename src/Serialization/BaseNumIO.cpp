@@ -1,4 +1,5 @@
 #include "BaseNumIO.h"
+#include "ArithmeticGraphNode.h"
 
 namespace rpc1k {
 
@@ -194,6 +195,17 @@ const std::string& RealParser::operator () (const std::shared_ptr<BaseNum>& num)
     }
     dst.reset();
     return src;
+}
+
+const std::string& RealParser::operator () (const std::shared_ptr<GraphNode>& node) {
+    std::shared_ptr<ConstantNode> constant_ptr = std::dynamic_pointer_cast<ConstantNode>(node);
+    if (constant_ptr) {
+        return operator() (constant_ptr->out_domain);
+    } else {
+        FREELOG("(Parse error): Parsed node must be constant! Return empty string.", errlevel::WARNING);
+        src = "";
+        return src;
+    }
 }
 
 void RealParser::write_to_file(std::ofstream& stream, io mode) {
