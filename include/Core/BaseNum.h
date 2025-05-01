@@ -17,12 +17,14 @@ inline constexpr int ZERO = LENGTH / 2 - 1;
 
 class ConstantNode;
 class AddNode;
+class MultNode;
 class RealParser;
 
 class BaseNum {
 private:
     bool sign;
     int64* data;
+    friend MultNode;
     friend RealParser;
 public:
     BaseNum();
@@ -85,6 +87,7 @@ protected:
     void notify_successors();
     friend ConstantNode;
     friend AddNode;
+    friend MultNode;
     friend RealParser;
 public:
     GraphNode();

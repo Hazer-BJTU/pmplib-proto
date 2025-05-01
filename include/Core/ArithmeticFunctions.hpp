@@ -65,8 +65,9 @@ inline void arithmetic_numerical_multiply(int64* A, int64* B, int64* C, int star
         int lbound = std::max(i + ZERO + 1 - (int)LENGTH, 0);
         int rbound = std::min(i + ZERO + 1, (int)LENGTH);
         for (int j = lbound; j < rbound; j++) {
-            int k = i + ZERO - j;
-            C[i] += A[j] * B[k];
+            if (A[j] && B[i + ZERO - j]) {
+                C[i] += A[j] * B[i + ZERO - j];
+            }
         }
     }
     return;
