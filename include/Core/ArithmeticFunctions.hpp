@@ -3,6 +3,10 @@
 #include "BaseNum.h"
 #include "BaseNumIO.h"
 #include <algorithm>
+#include <cassert>
+#ifdef AVX2_IN_USE
+#include <immintrin.h>
+#endif
 
 namespace rpc1k {
 
@@ -60,14 +64,13 @@ inline bool arithmetic_numerical_sub_carry(int64* A, int64* B, int64* C) {
 }
 
 inline void arithmetic_numerical_multiply(int64* A, int64* B, int64* C, int starting, int ending) {
+    //Ordinary segmented convolution multiplication.
     for (int i = starting; i < ending; i++) {
         C[i] = 0ull;
         int lbound = std::max(i + ZERO + 1 - (int)LENGTH, 0);
         int rbound = std::min(i + ZERO + 1, (int)LENGTH);
         for (int j = lbound; j < rbound; j++) {
-            if (A[j] && B[i + ZERO - j]) {
-                C[i] += A[j] * B[i + ZERO - j];
-            }
+            C[i] += A[j] * B[i + ZERO - j];
         }
     }
     return;

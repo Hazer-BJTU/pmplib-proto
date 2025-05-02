@@ -4,7 +4,7 @@ project(RPC-1K VERSION 1.0)
 
 include(CheckCXXCompilerFlag)
 
-set(OPTIMIZATION_FLAGS "-O3")
+set(OPTIMIZATION_FLAGS "-O3" "-g")
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     check_cxx_compiler_flag("-mavx2" AVX2_AVAILABLE)
     if (AVX2_AVAILABLE)

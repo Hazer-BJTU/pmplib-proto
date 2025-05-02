@@ -25,7 +25,7 @@ int Task::get_task_idx() const {
 
 bool ThreadPool::created = false;
 int ThreadPool::total_workers = std::thread::hardware_concurrency();
-int ThreadPool::num_groups = std::max(1, ThreadPool::total_workers / 2);
+int ThreadPool::num_groups = ThreadPool::total_workers;
 int ThreadPool::max_tasks = MAX_QUEUE_LENGTH;
 
 ThreadPool::SubGroup::SubGroup(): end_flag(false), num_active_threads(0) {}
