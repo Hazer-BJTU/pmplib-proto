@@ -1,7 +1,6 @@
-bin/
-build/
-lib/
-trash/
-.vscode/
-.idea/
-others/
+/.vscode/
+/bin/
+/build/
+/lib/
+/others/
+/trash/
