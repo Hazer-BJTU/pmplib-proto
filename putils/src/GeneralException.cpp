@@ -1,4 +1,4 @@
-#include <Log.h>
+#include "GeneralException.h"
 
 namespace putils {
 
@@ -12,7 +12,9 @@ GeneralException::GeneralException(
     auto now = std::chrono::system_clock::now();
     std::time_t now_time = std::chrono::system_clock::to_time_t(now);
     std::string threadStr = (std::stringstream() << threadId).str();
-    std::string timeStr = (std::stringstream() << std::put_time(std::localtime(&now_time), "%Y-%m-%d %X")).str();
+    std::tm tm;
+    localtime_r(&now_time, &tm);
+    std::string timeStr = (std::stringstream() << std::put_time(&tm, "%Y-%m-%d %X")).str();
     std::string head = "In file: " + file + ", in function: " + func;
     std::string body = "Error: " + error_type + ", " + msg;
     std::string info = "Thread: " + threadStr + ", time: " + timeStr;

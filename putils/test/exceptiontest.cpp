@@ -1,4 +1,4 @@
-#include "Log.h"
+#include "GeneralException.h"
 #include <random>
 
 using namespace std;

@@ -12,6 +12,7 @@
 
 #include <execinfo.h>
 #include <cxxabi.h>
+#include <time.h>
 
 #define GENERAL_EXCEPTION(msg, err) ::putils::GeneralException(msg, err, __FILE__, __func__)
 
@@ -41,6 +42,8 @@ public:
         const std::string& file,
         const std::string& func
     );
+    GeneralException(const GeneralException&) = default;
+    GeneralException& operator = (const GeneralException&) = default;
     const char* get_final_msg() noexcept;
     const char* what() const noexcept override;
     const char* type() const noexcept;
