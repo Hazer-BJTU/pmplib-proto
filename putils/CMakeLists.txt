@@ -1,4 +1,4 @@
-file(GLOB SOURCES "src/*")
+file(GLOB SOURCES "src/*.cpp" "include/*.hpp")
 file(GLOB TESTS "test/*")
 
 message("-- putils option flags used: ${COMPILER_OPTION_FLAGS}")

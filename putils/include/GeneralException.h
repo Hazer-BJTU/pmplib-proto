@@ -68,8 +68,8 @@ namespace putils {
 
 class GeneralException: public std::exception {
 private:
-    static constexpr int MAX_STACK_LENGTH = 128;
-    static constexpr int MAX_FUNCTION_NAME = 128;
+    static constexpr size_t MAX_STACK_LENGTH = 128;
+    static constexpr size_t MAX_FUNCTION_NAME = 128;
     std::string error_type, final_msg;
     std::vector<std::string> messages, backtraces;
     std::string process_stack_trace(const char* stack_str) noexcept;
