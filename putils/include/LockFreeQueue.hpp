@@ -28,7 +28,7 @@ concept ValidNodeType = requires(NodeType node) {
     requires std::is_default_constructible_v<NodeType>;        //Nodes should be default constructible.
 };
 /*If you want to customize and modify this class template, 
-  it is recommended that you directly inherit from putils::DefaultLFQNode.*/
+  it is recommended that you directly inherit from putils::DefaultLFQNode. */
 
 template<typename Container, typename NodeType>
 concept ValidContainer = requires(Container c, size_t size) {
@@ -36,6 +36,70 @@ concept ValidContainer = requires(Container c, size_t size) {
     requires std::is_default_constructible_v<Container>;       //Container should be default constructible.
     requires std::is_constructible_v<Container, size_t>;       //Container should support being constructed using size.
 };
+
+/**
+ * @brief A lock-free queue implementation using a ring buffer.
+ * 
+ * @tparam DataType The type of data to be stored in the queue.
+ * @tparam NodeType The node type used in the queue (must satisfy ValidNodeType concept).
+ * @tparam Container The container type used as the underlying storage (must satisfy ValidContainer concept).
+ * @tparam Allocator The allocator type for data allocation.
+ * 
+ * @section Design
+ * This class implements a lock-free queue using a ring buffer design with the following characteristics:
+ * 1. Thread-safe operations without locks (push/pop operations use atomic operations)
+ * 2. Fixed-size circular buffer with power-of-two capacity for efficient modulo operations
+ * 3. Producer-consumer pattern with separate head and tail pointers
+ * 4. Node-based design with ready flags to coordinate between producers and consumers
+ * 
+ * The queue uses a "ready" flag mechanism to ensure proper synchronization between producers and consumers:
+ * - Producers mark nodes as ready after filling them with data
+ * - Consumers only process nodes marked as ready
+ * - Each node can be in one of two states: ready for consumption or ready for production
+ * 
+ * @section Requirements
+ * - NodeType must contain:
+ *   - A 'data' member (std::shared_ptr<DataType>)
+ *   - A 'ready' member (std::atomic<bool>)
+ *   - Be default constructible
+ * - Container must:
+ *   - Support random access via operator[]
+ *   - Be default constructible
+ *   - Be constructible with a size parameter
+ * 
+ * @section Usage
+ * Basic usage example:
+ * @code
+ * putils::LockFreeQueue<int> queue(1024);  // Create queue with capacity 1024
+ * 
+ * // Producer thread
+ * auto data = std::make_shared<int>(42);
+ * queue.try_push(data);  // Or queue.try_enqueue(42);
+ * 
+ * // Consumer thread
+ * std::shared_ptr<int> received;
+ * if (queue.try_pop(received)) {
+ *     // Process received data
+ * }
+ * @endcode
+ * 
+ * @note
+ * 1. Queue size must be a power of 2 (enforced in constructor)
+ * 2. Minimum queue size is 4 (enforced in constructor)
+ * 3. size() and empty() methods are approximate due to lock-free nature
+ * 4. For custom node types, consider inheriting from DefaultLFQNode
+ * 
+ * @section Performance
+ * - All operations are wait-free (no spinning)
+ * - Uses memory ordering appropriate for each operation:
+ *   - acquire for reads
+ *   - release for writes
+ *   - acq_rel for read-modify-write operations
+ * - CAS (compare-and-swap) operations used for atomic updates
+ * 
+ * @author Hazer
+ * @date 2025/6/4
+ */
 
 template <
     class DataType,
@@ -75,6 +139,9 @@ public:
             if (next_tail == head.load(std::memory_order_acquire)) {
                 return false;
             }
+            /* In a parallel environment, the head may have been modified, 
+               but since the head in the ring buffer can only move in one direction, 
+               we can still guarantee that the current_tail is safe at this point. */
             is_occupied = ring_buffer[current_tail].ready.load(std::memory_order_acquire);
         } while (
             is_occupied || //Ensure that consumers have completed node clearing.
@@ -83,6 +150,10 @@ public:
                 std::memory_order_acq_rel,
                 std::memory_order_acquire
             )
+            /* Note that if the evaluation of is_occupied fails, the short-circuiting property of || will prevent the subsequent CAS operation from executing. 
+            If is_occupied evaluates to true but the node is modified by another producer thread between this evaluation and the CAS operation 
+            (meaning the tail has already moved), then the subsequent CAS check will inevitably fail. At least when the ring buffer is sufficiently long, 
+            it's unlikely for competing threads to be exactly one full cycle ahead of each other. */
         );
         //Complete node constructing.
         ring_buffer[current_tail].data = data_ptr;
@@ -108,6 +179,8 @@ public:
             if (current_head == tail.load(std::memory_order_acquire)) {
                 return false;
             }
+            /* Same as what we have mentioned above, 
+               we can guarantee that the current_head is safe at this point. */
             is_ready = ring_buffer[current_head].ready.load(std::memory_order_acquire);
         } while (
             !is_ready || //Ensure that producers have completed node constructing.
@@ -116,6 +189,7 @@ public:
                 std::memory_order_acq_rel,
                 std::memory_order_acquire
             )
+            //See try_push().
         );
         //Complete node clearing.
         data_ptr = std::move(ring_buffer[current_head].data);
