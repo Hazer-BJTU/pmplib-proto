@@ -36,8 +36,11 @@ private:
 public:
     explicit LockFreeQueue(size_t length): 
     ring_buffer(length), element_allocator(), head(0), tail(0), capacity(length) {
+        if (capacity < 4) {
+            throw std::invalid_argument("Too short length for a queue!");
+        }
         mask = capacity - 1;
-        if ((mask & capacity) != 0) {
+        if ((capacity & (capacity - 1)) != 0) {
             throw std::invalid_argument("Queue length must be a power of 2!");
         }
     }
@@ -55,17 +58,18 @@ public:
             if (next_tail == head.load(std::memory_order_acquire)) {
                 return false;
             }
-            is_occupied = ring_buffer[next_tail].ready.load(std::memory_order_acquire);
+            is_occupied = ring_buffer[current_tail].ready.load(std::memory_order_acquire);
         } while (
-            is_occupied || 
-            !tail.compare_exchange_weak(
-                current_tail, next_tail,
-                std::memory_order_release,
-                std::memory_order_relaxed
+            is_occupied || //Ensure that consumers have completed node clearing.
+            !tail.compare_exchange_weak( //Try to pre-occupy the node.
+                current_tail, next_tail, //Mode tail to next_tail.
+                std::memory_order_acq_rel,
+                std::memory_order_acquire
             )
         );
-        ring_buffer[next_tail].data = data_ptr;
-        ring_buffer[next_tail].ready.store(true, std::memory_order_release);
+        //Complete node constructing.
+        ring_buffer[current_tail].data = data_ptr;
+        ring_buffer[current_tail].ready.store(true, std::memory_order_release); //Ready for consume.
         return true;
     }
     template<class... Args>
@@ -79,7 +83,6 @@ public:
         return try_push(new_data_ptr);
     }
     bool try_pop(DataPtr& data_ptr) noexcept {
-        data_ptr.reset();
         bool is_ready;
         size_t current_head, next_head;
         do {
@@ -90,23 +93,26 @@ public:
             }
             is_ready = ring_buffer[current_head].ready.load(std::memory_order_acquire);
         } while (
-            !is_ready ||
-            !head.compare_exchange_weak(
-                current_head, next_head,
-                std::memory_order_release,
-                std::memory_order_relaxed
+            !is_ready || //Ensure that producers have completed node constructing.
+            !head.compare_exchange_weak( //Try to pre-release the node.
+                current_head, next_head, //Move head to next_head.
+                std::memory_order_acq_rel,
+                std::memory_order_acquire
             )
         );
-        data_ptr = ring_buffer[current_head].data;
-        ring_buffer[current_head].ready.store(false, std::memory_order_release);
+        //Complete node clearing.
+        data_ptr = std::move(ring_buffer[current_head].data);
+        ring_buffer[current_head].ready.store(false, std::memory_order_release); //Ready for produce.
         return true;
     }
     bool empty() const noexcept {
-        return head.load(std::memory_order_acquire) == tail.load(std::memory_order_acquire);
+        //Not precise!
+        return head.load(std::memory_order_relaxed) == tail.load(std::memory_order_relaxed);
     }
     size_t size() const noexcept {
-        size_t current_head = head.load(std::memory_order_acquire);
-        size_t current_tail = tail.load(std::memory_order_acquire);
+        //Not precise!
+        size_t current_head = head.load(std::memory_order_relaxed);
+        size_t current_tail = tail.load(std::memory_order_relaxed);
         return (current_tail - current_head) & mask;
     }
 };
