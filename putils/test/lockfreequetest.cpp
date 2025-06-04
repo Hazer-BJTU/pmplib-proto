@@ -9,7 +9,7 @@ int main() {
         lfq.try_enqueue(i);
     }
     shared_ptr<int> ptr;
-    for (int i = 0; i < 10; i++) {
+    while(!lfq.empty()) {
         lfq.try_pop(ptr);
         cout << *ptr << endl;
     }

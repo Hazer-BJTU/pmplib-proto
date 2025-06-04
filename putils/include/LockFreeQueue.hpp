@@ -9,23 +9,40 @@
 namespace putils {
 
 template<class DataType>
-struct Node {
+struct DefaultLFQNode {
+    using DataPtr = std::shared_ptr<DataType>;
     std::shared_ptr<DataType> data;
     std::atomic<bool> ready;
-    explicit Node(const std::shared_ptr<DataType>& ptr = nullptr): data(ptr), ready(false) {}
-    Node(const Node& node) = delete;
-    Node& operator = (const Node& node) = delete;
-    Node(Node&&) = delete;
-    Node& operator = (Node&&) = delete;
-    ~Node() {}
+    explicit DefaultLFQNode(const DataPtr& ptr = nullptr): data(ptr), ready(false) {}
+    DefaultLFQNode(const DefaultLFQNode& node) = delete;
+    DefaultLFQNode& operator = (const DefaultLFQNode& node) = delete;
+    DefaultLFQNode(DefaultLFQNode&&) = delete;
+    DefaultLFQNode& operator = (DefaultLFQNode&&) = delete;
+    ~DefaultLFQNode() {}
+};
+
+template <typename NodeType, typename DataType>
+concept ValidNodeType = requires(NodeType node) {
+    { node.data } -> std::same_as<std::shared_ptr<DataType>&>; //Nodes must contain 'data' field!
+    { node.ready } -> std::same_as<std::atomic<bool>&>;        //Nodes must contain 'ready' field!
+    requires std::is_default_constructible_v<NodeType>;        //Nodes should be default constructible.
+};
+/*If you want to customize and modify this class template, 
+  it is recommended that you directly inherit from putils::DefaultLFQNode.*/
+
+template<typename Container, typename NodeType>
+concept ValidContainer = requires(Container c, size_t size) {
+    { c[size] } -> std::same_as<NodeType&>;                    //Container must support operator []! e.g., random access.
+    requires std::is_default_constructible_v<Container>;       //Container should be default constructible.
+    requires std::is_constructible_v<Container, size_t>;       //Container should support being constructed using size.
 };
 
 template <
     class DataType,
-    class NodeType = Node<DataType>,
+    class NodeType = DefaultLFQNode<DataType>,
     class Container = std::deque<NodeType>,
-    class Allocator = std::allocator<DataType>
->
+    class Allocator = std::allocator<DataType>                 //Only for data allocation.
+> requires ValidNodeType<NodeType, DataType> && ValidContainer<Container, NodeType>
 class LockFreeQueue {
 private:
     using DataPtr = std::shared_ptr<DataType>;
