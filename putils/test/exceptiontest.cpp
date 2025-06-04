@@ -1,28 +1,29 @@
 #include "GeneralException.h"
-#include <random>
 
 using namespace std;
 
-random_device rd;
-mt19937 gen(rd());
-uniform_int_distribution<int> udist(1, 100);
+int add(int a, int b) {
+    throw GENERAL_EXCEPTION("Hello world!", "no exception");
+    return a + b;
+}
 
-void function() {
-    int random_number = udist(gen);
-    if (random_number <= 25) {
-        throw invalid_argument("Hello world!");
-    } else {
-        try {
-            function();
-        } CATCH_THROW_GENERAL;
-    }
+void fun1() {
+    try {
+        add(1, 2);
+    } CATCH_THROW_GENERAL
     return;
+}
+
+void fun2(const string& str) {
+    try {
+        fun1();
+    } CATCH_THROW_GENERAL
 }
 
 int main() {
     try {
-        function();
-    } catch(putils::GeneralException& e) {
+        fun2("nothing");
+    } catch(exception& e) {
         cout << e.what() << endl;
     }
     return 0;

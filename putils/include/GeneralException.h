@@ -28,6 +28,44 @@ catch(::putils::GeneralException& e) { \
 
 namespace putils {
 
+/**
+ * @class GeneralException
+ * @brief An exception class that captures and stores call stack information.
+ * 
+ * This exception class extends standard exception functionality by:
+ * - Capturing the call stack at the point where the exception is thrown
+ * - Storing contextual information (file, function, message)
+ * - Providing formatted output with complete error details and backtrace
+ * 
+ * The class works with two companion macros:
+ * - GENERAL_EXCEPTION(msg, details): Creates an exception with message and details
+ * - CATCH_THROW_GENERAL: Catches any exception, wraps it in GeneralException and rethrows
+ * 
+ * The output format includes:
+ * 1. Original error location (file and function)
+ * 2. Error message and details
+ * 3. Thread ID and timestamp
+ * 4. Propagation path (which functions the exception passed through)
+ * 5. Full symbolic backtrace with addresses and locations
+ * 
+ * @note Requires stack trace functionality (like libunwind or backtrace)
+ * @note Macros assume exception handling is done in C++ style
+ * 
+ * @example
+ * // Throwing:
+ * throw GENERAL_EXCEPTION("Calculation failed", "Division by zero");
+ * 
+ * // Catching and propagating:
+ * try { someFunction(); }
+ * CATCH_THROW_GENERAL
+ * 
+ * @see GENERAL_EXCEPTION
+ * @see CATCH_THROW_GENERAL
+ * 
+ * @author Hazer
+ * @date 2025/6/3
+ */
+
 class GeneralException: public std::exception {
 private:
     static constexpr int MAX_STACK_LENGTH = 128;
@@ -44,6 +82,8 @@ public:
     );
     GeneralException(const GeneralException&) = default;
     GeneralException& operator = (const GeneralException&) = default;
+    GeneralException(GeneralException&&) = default;
+    GeneralException& operator = (GeneralException&&) = default;
     const char* get_final_msg() noexcept;
     const char* what() const noexcept override;
     const char* type() const noexcept;

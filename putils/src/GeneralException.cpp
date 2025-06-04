@@ -27,7 +27,7 @@ GeneralException::GeneralException(
     char** stack_str = backtrace_symbols(stack_addr, num_frames);
     backtraces.push_back("Full backtrace: ");
     for (int i = 0; i < num_frames; i++) {
-        backtraces.push_back(process_stack_trace(stack_str[i]));
+        backtraces.push_back(stack_str[i]);
     }
     free(stack_str);
 }
@@ -86,6 +86,7 @@ const char* GeneralException::get_final_msg() noexcept {
         line_width = std::max(line_width, (int)str.length());
     }
     for (auto& str: backtraces) {
+        str = process_stack_trace(str.c_str());
         line_width = std::max(line_width, (int)str.length());
     }
     for (auto& str: messages) {
