@@ -9,7 +9,7 @@
 
 using namespace putils;
 
-constexpr size_t QUEUE_SIZE = 1024;
+constexpr size_t QUEUE_SIZE = 4096;
 constexpr size_t PRODUCER_COUNT = 4;
 constexpr size_t CONSUMER_COUNT = 4;
 constexpr size_t ITEMS_PER_PRODUCER = 10000;
@@ -25,11 +25,9 @@ std::atomic<int> consumed_count(0);
 std::atomic<int> push_failures(0);
 std::atomic<int> pop_failures(0);
 
-// 使用互斥锁保护consumed_items
 std::vector<std::vector<int>> consumed_items(PRODUCER_COUNT);
-std::mutex consumed_items_mutex;  // 专门用于保护consumed_items
+std::mutex consumed_items_mutex;
 
-// 用于保护std::cout输出
 std::mutex cout_mutex;
 
 void producer_thread(LockFreeQueue<TestData>& queue, int producer_id) {
@@ -57,11 +55,11 @@ void producer_thread(LockFreeQueue<TestData>& queue, int producer_id) {
 
 void consumer_thread(LockFreeQueue<TestData>& queue, int consumer_id) {
     std::shared_ptr<TestData> data;
+    int local_consumed_count = 0;
 
     while (consumed_count < PRODUCER_COUNT * ITEMS_PER_PRODUCER) {
         if (queue.try_pop(data)) {
             if (data) {
-                // 保护consumed_items的访问
                 std::lock_guard<std::mutex> lock(consumed_items_mutex);
                 
                 if (data->producer_id >= 0 && data->producer_id < PRODUCER_COUNT &&
@@ -72,6 +70,7 @@ void consumer_thread(LockFreeQueue<TestData>& queue, int consumer_id) {
                     std::cerr << "Consumer " << consumer_id << ": Invalid data consumed!" << std::endl;
                 }
                 consumed_count++;
+                local_consumed_count++;
             }
         } else {
             pop_failures++;
@@ -80,7 +79,7 @@ void consumer_thread(LockFreeQueue<TestData>& queue, int consumer_id) {
     }
 
     std::lock_guard<std::mutex> lock(cout_mutex);
-    std::cout << "Consumer " << consumer_id << " finished. Consumed: " << consumed_count << std::endl;
+    std::cout << "Consumer " << consumer_id << " finished. Consumed: " << local_consumed_count << std::endl;
 }
 
 int main() {
@@ -110,7 +109,6 @@ int main() {
         auto end_time = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
 
-        // 验证结果 - 此时所有线程已结束，不需要加锁
         bool all_correct = true;
         for (int i = 0; i < PRODUCER_COUNT; ++i) {
             if (consumed_items[i].size() != ITEMS_PER_PRODUCER) {

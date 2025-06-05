@@ -110,12 +110,14 @@ template <
 class LockFreeQueue {
 private:
     using DataPtr = std::shared_ptr<DataType>;
+    static constexpr size_t DEFAULT_BUFFER_LENGTH = 1024;
     Container ring_buffer;
     Allocator element_allocator;
-    std::atomic<size_t> head, tail;
+    alignas(64) std::atomic<size_t> head;
+    alignas(64) std::atomic<size_t> tail;
     size_t capacity, mask;
 public:
-    explicit LockFreeQueue(size_t length): 
+    explicit LockFreeQueue(size_t length = DEFAULT_BUFFER_LENGTH): 
     ring_buffer(length), element_allocator(), head(0), tail(0), capacity(length) {
         if (capacity < 4) {
             throw std::invalid_argument("Too short length for a queue!");
@@ -146,7 +148,7 @@ public:
         } while (
             is_occupied || //Ensure that consumers have completed node clearing.
             !tail.compare_exchange_weak( //Try to pre-occupy the node.
-                current_tail, next_tail, //Mode tail to next_tail.
+                current_tail, next_tail, //Move tail to next_tail.
                 std::memory_order_acq_rel,
                 std::memory_order_acquire
             )
@@ -162,13 +164,11 @@ public:
     }
     template<class... Args>
     bool try_enqueue(Args&&... args) noexcept {
-        DataPtr new_data_ptr;
         try {
-            new_data_ptr = std::allocate_shared<DataType>(element_allocator, std::forward<Args>(args)...);
+            return try_push(std::allocate_shared<DataType>(element_allocator, std::forward<Args>(args)...));
         } catch (...) {
             return false;
         }
-        return try_push(new_data_ptr);
     }
     bool try_pop(DataPtr& data_ptr) noexcept {
         bool is_ready;
