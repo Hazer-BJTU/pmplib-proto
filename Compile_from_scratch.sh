@@ -3,4 +3,4 @@ rm -rf build/*
 rm -rf lib/*
 cd build
 cmake ..
-make
+make -j$(nproc)

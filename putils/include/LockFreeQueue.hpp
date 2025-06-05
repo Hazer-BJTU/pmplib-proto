@@ -11,7 +11,7 @@ namespace putils {
 template<class DataType>
 struct DefaultLFQNode {
     using DataPtr = std::shared_ptr<DataType>;
-    std::shared_ptr<DataType> data;
+    DataPtr data;
     std::atomic<bool> ready;
     explicit DefaultLFQNode(const DataPtr& ptr = nullptr): data(ptr), ready(false) {}
     DefaultLFQNode(const DefaultLFQNode& node) = delete;
@@ -133,7 +133,6 @@ public:
     LockFreeQueue& operator = (LockFreeQueue&&) = delete;
     ~LockFreeQueue() {}
     bool try_push(const DataPtr& data_ptr) noexcept {
-        bool is_occupied;
         size_t current_tail, next_tail;
         do {
             current_tail = tail.load(std::memory_order_acquire);
@@ -144,9 +143,9 @@ public:
             /* In a parallel environment, the head may have been modified, 
                but since the head in the ring buffer can only move in one direction, 
                we can still guarantee that the current_tail is safe at this point. */
-            is_occupied = ring_buffer[current_tail].ready.load(std::memory_order_acquire);
         } while (
-            is_occupied || //Ensure that consumers have completed node clearing.
+            //Ensure that consumers have completed node clearing.
+            ring_buffer[current_tail].ready.load(std::memory_order_acquire) ||
             !tail.compare_exchange_weak( //Try to pre-occupy the node.
                 current_tail, next_tail, //Move tail to next_tail.
                 std::memory_order_acq_rel,
@@ -171,7 +170,6 @@ public:
         }
     }
     bool try_pop(DataPtr& data_ptr) noexcept {
-        bool is_ready;
         size_t current_head, next_head;
         do {
             current_head = head.load(std::memory_order_acquire);
@@ -181,9 +179,9 @@ public:
             }
             /* Same as what we have mentioned above, 
                we can guarantee that the current_head is safe at this point. */
-            is_ready = ring_buffer[current_head].ready.load(std::memory_order_acquire);
         } while (
-            !is_ready || //Ensure that producers have completed node constructing.
+            //Ensure that producers have completed node constructing.
+            !ring_buffer[current_head].ready.load(std::memory_order_acquire) || 
             !head.compare_exchange_weak( //Try to pre-release the node.
                 current_head, next_head, //Move head to next_head.
                 std::memory_order_acq_rel,
