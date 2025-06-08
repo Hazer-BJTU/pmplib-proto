@@ -2,19 +2,28 @@
 
 namespace putils {
 
+std::string get_local_time_r() {
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    std::tm tm;
+    localtime_r(&now_time, &tm);
+    return (std::stringstream() << std::put_time(&tm, "%F %T")).str();
+}
+
+std::string get_local_thread_id() {
+    auto thread_id = std::this_thread::get_id();
+    std::hash<std::thread::id> hasher;
+    return (std::stringstream() << hasher(thread_id)).str();
+}
+
 GeneralException::GeneralException(
     const std::string& msg, 
     const std::string& err, 
     const std::string& file,
     const std::string& func
 ): messages(), error_type(err), final_msg("") {
-    auto threadId = std::this_thread::get_id();
-    auto now = std::chrono::system_clock::now();
-    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
-    std::string threadStr = (std::stringstream() << threadId).str();
-    std::tm tm;
-    localtime_r(&now_time, &tm);
-    std::string timeStr = (std::stringstream() << std::put_time(&tm, "%Y-%m-%d %X")).str();
+    std::string threadStr = get_local_thread_id();
+    std::string timeStr = get_local_time_r();
     std::string head = "In file: " + file + ", in function: " + func;
     std::string body = "Error: " + error_type + ", " + msg;
     std::string info = "Thread: " + threadStr + ", time: " + timeStr;

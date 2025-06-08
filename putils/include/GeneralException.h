@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <exception>
 #include <iostream>
 #include <sstream>
@@ -27,6 +28,37 @@ catch(::putils::GeneralException& e) { \
 }                                      \
 
 namespace putils {
+
+template<typename Lambda>
+class ScopeGuard {
+private:
+    Lambda callback;
+    bool active;
+public:
+    ScopeGuard(Lambda&& target): callback(std::forward<Lambda>(target)), active(true) {}
+    ~ScopeGuard() {
+        if (active) {
+            //callback must be noexcept.
+            callback();
+        }
+    }
+    ScopeGuard(const ScopeGuard&) = delete;
+    ScopeGuard& operator = (const ScopeGuard&) = delete;
+    ScopeGuard(ScopeGuard&& sg) noexcept: callback(std::move(sg.callback)), active(sg.active) {
+        sg.dismiss();
+    }
+    ScopeGuard& operator = (ScopeGuard&& sg) noexcept {
+        callback = std::move(sg.callback);
+        active = sg.active;
+        sg.dismiss();
+    }
+    void dismiss() noexcept { 
+        active = false; 
+    }
+};
+
+std::string get_local_time_r();
+std::string get_local_thread_id();
 
 /**
  * @class GeneralException

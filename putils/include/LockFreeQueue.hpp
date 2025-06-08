@@ -151,8 +151,8 @@ public:
                 std::memory_order_acq_rel,
                 std::memory_order_acquire
             )
-            /* Note that if the evaluation of is_occupied fails, the short-circuiting property of || will prevent the subsequent CAS operation from executing. 
-            If is_occupied evaluates to true but the node is modified by another producer thread between this evaluation and the CAS operation 
+            /* Note that if the evaluation of 'ready' fails, the short-circuiting property of || will prevent the subsequent CAS operation from executing. 
+            If 'ready' evaluates to false but the node is modified by another producer thread between this evaluation and the CAS operation 
             (meaning the tail has already moved), then the subsequent CAS check will inevitably fail. At least when the ring buffer is sufficiently long, 
             it's unlikely for competing threads to be exactly one full cycle ahead of each other. */
         );
@@ -166,6 +166,7 @@ public:
         try {
             return try_push(std::allocate_shared<DataType>(element_allocator, std::forward<Args>(args)...));
         } catch (...) {
+            //Just try again.
             return false;
         }
     }
