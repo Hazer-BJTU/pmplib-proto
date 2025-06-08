@@ -24,6 +24,30 @@ catch(::putils::GeneralException& e) {                    \
 
 namespace putils {
 
+class TerminateCalls {
+public:
+    using CallbackList = std::vector<std::function<void()>>;
+private:
+    static TerminateCalls terminate_handler_instance;
+    CallbackList callbacks;
+    std::mutex handler_lock;
+    TerminateCalls();
+    ~TerminateCalls();
+public:
+    TerminateCalls(const TerminateCalls&) = delete;
+    TerminateCalls& operator = (const TerminateCalls&) = delete;
+    TerminateCalls(TerminateCalls&&) = delete;
+    TerminateCalls& operator = (TerminateCalls&&) = delete;
+    static TerminateCalls& get_terminate_handler() noexcept;
+    template<typename Lambda>
+    void register_terminate(Lambda&& callback) noexcept {
+        std::lock_guard<std::mutex> lock(handler_lock);
+        callbacks.emplace_back(std::forward<Lambda>(callback));
+        return;
+    }
+    CallbackList get_terminate_callbacks() noexcept;
+};
+
 /**
  * @class Logger
  * @brief Thread-safe logging utility with asynchronous buffering and configurable log levels.
@@ -71,7 +95,7 @@ private:
     using Entry = std::pair<std::string, Level>;
     using LFQ = LockFreeQueue<Entry>;
     static constexpr const char* DEFAULT_LOG_FILE = "runtime_log.txt";
-    static constexpr size_t DEFAULT_LOG_CAPACITY = 2048;
+    static constexpr size_t DEFAULT_LOG_CAPACITY = 256;
     static constexpr Level DEFAULT_LOG_LEVEL = Level::WARN;
     std::once_flag once_flag_buffer;
     std::string log_filepath; //protected by logger_lock
