@@ -24,6 +24,7 @@ int main() {
     try {
         fun2("Call first time.");
     } PUTILS_CATCH_LOG_GENERAL_ERROR
+
     fun2("Call second time.");
     return 0;
 }

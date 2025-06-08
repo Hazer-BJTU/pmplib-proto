@@ -7,6 +7,7 @@ add_library(putils SHARED ${SOURCES})
 set_target_properties(putils PROPERTIES ENABLE_EXPORTS ON)
 target_link_options(putils PRIVATE ${COMPILER_OPTION_FLAGS})
 target_compile_definitions(putils PRIVATE PUTILS_GENERAL_EXCEPTION_KNOWN_ONLY)
+message("-- putils defines PUTILS_GENERAL_EXCEPTION_KNOWN_ONLY")
 
 foreach (test_source_file ${TESTS})
     get_filename_component(executable_name ${test_source_file} NAME_WE)

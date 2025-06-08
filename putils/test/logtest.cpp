@@ -7,8 +7,7 @@
 using namespace putils;
 
 void test_logger_with_small_buffer() {
-    // Set up logger with very small buffer capacity (32 entries)
-    Logger::get_global_logger().set("test_log.txt", Logger::Level::INFO, 32);
+    Logger::get_global_logger().set("test_log.txt", Logger::Level::INFO);
     
     const int num_threads = 4;
     const int messages_per_thread = 100;

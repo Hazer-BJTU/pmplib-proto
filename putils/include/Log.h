@@ -30,7 +30,7 @@ public:
 private:
     static TerminateCalls terminate_handler_instance;
     CallbackList callbacks;
-    std::mutex handler_lock;
+    std::mutex handler_lock, cerr_lock;
     TerminateCalls();
     ~TerminateCalls();
 public:
@@ -114,7 +114,7 @@ public:
     Logger& operator = (Logger&&) = delete;
     static Logger& get_global_logger();
     void flush();
-    void set(const std::string& filepath, Level level, size_t capacity = 0) noexcept;
+    void set(const std::string& filepath, Level level, size_t capacity = DEFAULT_LOG_CAPACITY) noexcept;
     void add(const std::string& log_message, Level level = Level::INFO);
 };
 
