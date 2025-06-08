@@ -1,4 +1,4 @@
-#include "GeneralException.h"
+#include "Log.h"
 
 using namespace std;
 
@@ -23,8 +23,6 @@ void fun2(const string& str) {
 int main() {
     try {
         fun2("nothing");
-    } catch(exception& e) {
-        cout << e.what() << endl;
-    }
+    } PUTILS_CATCH_LOG_GENERAL_ERROR
     return 0;
 }
