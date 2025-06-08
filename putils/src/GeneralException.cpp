@@ -2,7 +2,7 @@
 
 namespace putils {
 
-std::string get_local_time_r() {
+std::string get_local_time_r() noexcept {
     auto now = std::chrono::system_clock::now();
     std::time_t now_time = std::chrono::system_clock::to_time_t(now);
     std::tm tm;
@@ -10,7 +10,7 @@ std::string get_local_time_r() {
     return (std::stringstream() << std::put_time(&tm, "%F %T")).str();
 }
 
-std::string get_local_thread_id() {
+std::string get_local_thread_id() noexcept {
     auto thread_id = std::this_thread::get_id();
     std::hash<std::thread::id> hasher;
     return (std::stringstream() << hasher(thread_id)).str();
@@ -25,7 +25,7 @@ GeneralException::GeneralException(
     std::string threadStr = get_local_thread_id();
     std::string timeStr = get_local_time_r();
     std::string head = "In file: " + file + ", in function: " + func;
-    std::string body = "Error: " + error_type + ", " + msg;
+    std::string body = "Error: " + error_type + ". " + msg;
     std::string info = "Thread: " + threadStr + ", time: " + timeStr;
     messages.push_back(head);
     messages.push_back(body);
@@ -70,12 +70,20 @@ std::string GeneralException::process_stack_trace(const char* stack_str) noexcep
             if (status == 0 && demangled_name) {
                 funcname = demangled_name.get();
                 if (funcname.length() > MAX_FUNCTION_NAME) {
-                    int cut = funcname.find('(');
-                    funcname = funcname.substr(0, cut) + "(...)";
+                    int template_pos = funcname.find('<');
+                    int bracket_pos = funcname.find('(');
+                    if (bracket_pos < template_pos) {
+                        funcname = funcname.substr(0, bracket_pos) + "(...)";
+                    } else {
+                        funcname = funcname.substr(0, template_pos) + "<>(...)";
+                    }
                 }
             }
         } else {
             funcname = "unknown";
+            if (ignore_unknown) {
+                return "";
+            }
         }
         std::stringstream ss;
         ss << "[" << address << "] " << funcname << " " << offset << " in file " << filename;
@@ -102,7 +110,9 @@ const char* GeneralException::get_final_msg() noexcept {
         ss << "-- " << std::left << std::setw(line_width) << str << " --" << std::endl;
     }
     for (auto& str: backtraces) {
-        ss << "-- " << std::left << std::setw(line_width) << str << " --" << std::endl;
+        if (str != "") {
+            ss << "-- " << std::left << std::setw(line_width) << str << " --" << std::endl;
+        }
     }
     final_msg = ss.str();
     return final_msg.c_str();

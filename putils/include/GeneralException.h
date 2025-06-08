@@ -15,19 +15,25 @@
 #include <cxxabi.h>
 #include <time.h>
 
-#define GENERAL_EXCEPTION(msg, err) ::putils::GeneralException(msg, err, __FILE__, __func__)
+#define PUTILS_GENERAL_EXCEPTION(msg, err) ::putils::GeneralException(msg, err, __FILE__, __func__)
 
-#define CATCH_THROW_GENERAL            \
+#define PUTILS_CATCH_THROW_GENERAL     \
 catch(::putils::GeneralException& e) { \
     e.append(__FILE__, __func__);      \
     throw e;                           \
-} catch(::std::exception& e) {         \
-    throw GENERAL_EXCEPTION(           \
+} catch(const ::std::exception& e) {   \
+    throw PUTILS_GENERAL_EXCEPTION(    \
         e.what(), "std exception"      \
     );                                 \
 }                                      \
 
 namespace putils {
+
+#ifdef PUTILS_GENERAL_EXCEPTION_KNOWN_ONLY
+    inline constexpr bool ignore_unknown = true;
+#else
+    inline constexpr bool ignore_unknown = false;
+#endif
 
 template<typename Lambda>
 class ScopeGuard {
@@ -38,8 +44,9 @@ public:
     ScopeGuard(Lambda&& target): callback(std::forward<Lambda>(target)), active(true) {}
     ~ScopeGuard() {
         if (active) {
-            //callback must be noexcept.
-            callback();
+            try {
+                callback();
+            } catch(...) {}
         }
     }
     ScopeGuard(const ScopeGuard&) = delete;
@@ -57,8 +64,8 @@ public:
     }
 };
 
-std::string get_local_time_r();
-std::string get_local_thread_id();
+std::string get_local_time_r() noexcept;
+std::string get_local_thread_id() noexcept;
 
 /**
  * @class GeneralException

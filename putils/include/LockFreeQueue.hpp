@@ -6,6 +6,8 @@
 #include <thread>
 #include <deque>
 
+#include "GeneralException.h"
+
 namespace putils {
 
 template<class DataType>
@@ -120,11 +122,11 @@ public:
     explicit LockFreeQueue(size_t length = DEFAULT_BUFFER_LENGTH): 
     ring_buffer(length), element_allocator(), head(0), tail(0), capacity(length) {
         if (capacity < 4) {
-            throw std::invalid_argument("Too short length for a queue!");
+            throw PUTILS_GENERAL_EXCEPTION("Too short length for a queue!", "invalid argument");
         }
         mask = capacity - 1;
         if ((capacity & (capacity - 1)) != 0) {
-            throw std::invalid_argument("Queue length must be a power of 2!");
+            throw PUTILS_GENERAL_EXCEPTION("Queue length must be a power of 2!", "invalid argument");
         }
     }
     LockFreeQueue(const LockFreeQueue&) = delete;

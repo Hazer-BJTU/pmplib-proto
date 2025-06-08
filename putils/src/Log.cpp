@@ -11,7 +11,7 @@ Logger::Logger(): once_flag_buffer(),
                   flushing(false),
                   logger_lock() { register_exit(); }
                   
-Logger::~Logger() { flush(); }
+Logger::~Logger() { try { flush(); } catch(...) {} }
 
 void Logger::flush() {
     if (!initialized.load(std::memory_order_acquire)) {
@@ -19,6 +19,7 @@ void Logger::flush() {
     }
     if (flushing.exchange(true, std::memory_order_acq_rel)) {
         //Only one thread flushes the buffer.
+        std::this_thread::yield();
         return;
     }
     std::lock_guard<std::mutex> lock(logger_lock);
@@ -29,7 +30,7 @@ void Logger::flush() {
     });
     try {
         if (!file_out.is_open()) {
-            throw GENERAL_EXCEPTION("Failed to open runtime log file!", "I/O error");
+            throw PUTILS_GENERAL_EXCEPTION("Failed to open runtime log file!", "I/O error");
         }
         std::shared_ptr<Entry> entry;
         auto converter = [](Level level) -> const char* {
@@ -55,13 +56,23 @@ void Logger::flush() {
                 }
             }
         }
-    } CATCH_THROW_GENERAL
+    } PUTILS_CATCH_THROW_GENERAL
     return;
 }
 
 void Logger::register_exit() noexcept {
     std::set_terminate([]() {
-        ::putils::Logger::get_global_logger().flush();
+        if (auto eptr = std::current_exception()) {
+            try {
+                std::rethrow_exception(eptr);
+            } catch (const std::exception& e) {
+                std::cerr << "Exception occurred!" << std::endl; 
+                std::cerr << e.what() << std::endl;
+            }
+        }
+        try {
+            ::putils::Logger::get_global_logger().flush();
+        } catch(...) {}
         std::abort();
     });
     return;
@@ -92,7 +103,7 @@ void Logger::add(const std::string& log_message, Level level) {
         while(!log_buffer->try_enqueue(log_message, level)) {
             flush();
         }
-    } CATCH_THROW_GENERAL
+    } PUTILS_CATCH_THROW_GENERAL
     return;
 }
 
