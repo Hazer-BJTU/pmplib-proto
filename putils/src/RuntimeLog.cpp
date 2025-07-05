@@ -83,6 +83,7 @@ RuntimeLog::~RuntimeLog() {
             flush();
         } catch(...) {
             //Ignore all potential exceptions.
+            std::cerr << "Failed to flush logs during destruction!" << std::endl;
         }
     }
 }
@@ -95,8 +96,8 @@ void RuntimeLog::register_exit() noexcept {
 
 bool RuntimeLog::set_global_log(
     const std::string& log_file_path,
-    size_t log_capacity,
-    Level log_level
+    Level log_level,
+    size_t log_capacity
 ) noexcept {
     std::lock_guard<std::mutex> lock(RuntimeLog::setting_lock);
     if (RuntimeLog::initialized.load(std::memory_order_relaxed)) {
