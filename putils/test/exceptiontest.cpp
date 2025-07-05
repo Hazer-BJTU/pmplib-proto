@@ -1,4 +1,4 @@
-#include "Log.h"
+#include "RuntimeLog.h"
 
 using namespace std;
 
