@@ -117,10 +117,11 @@ private:
     Allocator element_allocator;
     alignas(64) std::atomic<size_t> head;
     alignas(64) std::atomic<size_t> tail;
+    alignas(64) std::atomic<size_t> qlen;
     size_t capacity, mask;
 public:
     explicit LockFreeQueue(size_t length = DEFAULT_BUFFER_LENGTH): 
-    ring_buffer(length), element_allocator(), head(0), tail(0), capacity(length) {
+    ring_buffer(length), element_allocator(), head(0), tail(0), qlen(0), capacity(length) {
         if (capacity < 4) {
             throw PUTILS_GENERAL_EXCEPTION("Too short length for a queue!", "invalid argument");
         }
@@ -161,6 +162,7 @@ public:
         //Complete node constructing.
         ring_buffer[current_tail].data = data_ptr;
         ring_buffer[current_tail].ready.store(true, std::memory_order_release); //Ready for consume.
+        qlen.fetch_add(1, std::memory_order_acq_rel);
         return true;
     }
     template<class... Args>
@@ -195,17 +197,18 @@ public:
         //Complete node clearing.
         data_ptr = std::move(ring_buffer[current_head].data);
         ring_buffer[current_head].ready.store(false, std::memory_order_release); //Ready for produce.
+        qlen.fetch_sub(1, std::memory_order_acq_rel);
         return true;
     }
     bool empty() const noexcept {
-        //Not precise!
-        return head.load(std::memory_order_relaxed) == tail.load(std::memory_order_relaxed);
+        /* return head.load(std::memory_order_relaxed) == tail.load(std::memory_order_relaxed); */
+        return qlen.load(std::memory_order_acquire) == 0;
     }
     size_t size() const noexcept {
-        //Not precise!
-        size_t current_head = head.load(std::memory_order_relaxed);
-        size_t current_tail = tail.load(std::memory_order_relaxed);
-        return (current_tail - current_head) & mask;
+        /* size_t current_head = head.load(std::memory_order_relaxed);
+           size_t current_tail = tail.load(std::memory_order_relaxed);
+           return (current_tail - current_head) & mask; */
+        return qlen.load(std::memory_order_acquire);
     }
 };
 

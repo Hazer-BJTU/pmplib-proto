@@ -18,11 +18,10 @@ private:
     static constexpr bool INACTIVE = 0;
     std::vector<std::thread> workers;
     std::atomic<int> active_workers;
-    std::mutex cv_inactive_lock;
+    std::mutex cv_lock;
     std::condition_variable cv_inactive;
-    std::unique_ptr<LFQ> task_queue;
-    std::mutex cv_all_done_lock;
     std::condition_variable cv_all_done;
+    std::unique_ptr<LFQ> task_queue;
     std::atomic<bool> state;
     std::atomic<bool> quit;
 public:
