@@ -1,6 +1,7 @@
 #pragma once
 
-#include <random>
+#include <thread>
+#include <condition_variable>
 
 #include "LockFreeQueue.hpp"
 #include "GeneralException.h"
@@ -8,7 +9,35 @@
 
 namespace putils {
 
-inline std::random_device device_random_generator;
-int get_random_number(int lower_bound, int upper_bound);
+class Task;
+
+class TaskHandler {
+private:
+    using LFQ = LockFreeQueue<Task>;
+    static constexpr bool ACTIVE = 1;
+    static constexpr bool INACTIVE = 0;
+    std::vector<std::thread> workers;
+    std::atomic<int> active_workers;
+    std::mutex cv_inactive_lock;
+    std::condition_variable cv_inactive;
+    std::unique_ptr<LFQ> task_queue;
+    std::mutex cv_all_done_lock;
+    std::condition_variable cv_all_done;
+    std::atomic<bool> state;
+    std::atomic<bool> quit;
+public:
+    TaskHandler(size_t num_workers, size_t queue_capacity);
+    ~TaskHandler();
+    void wait_all_done() noexcept;
+    void activate() noexcept;
+    void inactivate() noexcept;
+};
+
+class ThreadPool {
+private:
+
+public:
+
+};
 
 }
