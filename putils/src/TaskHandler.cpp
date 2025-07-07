@@ -1,5 +1,4 @@
 #include "TaskHandler.h"
-#include "Putils.h"
 
 namespace putils {
 
@@ -15,7 +14,10 @@ workers(), active_workers(num_workers), cv_lock(), cv_inactive(), cv_all_done(),
                     if (task_queue->try_pop(task_ptr) && task_ptr) {
                         try {
                             task_ptr->run();
-                        } PUTILS_CATCH_LOG_GENERAL_WARN
+                        } PUTILS_CATCH_LOG_GENERAL_MSG(
+                            "Task loss due to runtime errors.",
+                            RuntimeLog::Level::WARN
+                        )
                     } else if (task_queue->empty()) {
                         if (state.load(std::memory_order_acquire) == INACTIVE) {
                             std::unique_lock<std::mutex> lock(cv_lock);
@@ -28,7 +30,11 @@ workers(), active_workers(num_workers), cv_lock(), cv_inactive(), cv_all_done(),
                                 break;
                             }
                             active_workers.fetch_add(1, std::memory_order_acq_rel);
+                        } else {
+                            std::this_thread::yield();
                         }
+                    } else {
+                        std::this_thread::yield();
                     }
                 }
             });

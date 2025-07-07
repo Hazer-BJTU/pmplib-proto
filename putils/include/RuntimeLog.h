@@ -20,6 +20,18 @@ catch(::putils::GeneralException& e) {                     \
     logger.add(e.what(), level);                           \
 }                                                          \
 
+#define PUTILS_CATCH_LOG_GENERAL_MSG(msg, level)           \
+catch(::putils::GeneralException& e) {                     \
+    e.append(__FILE__, __func__);                          \
+    auto& logger = ::putils::RuntimeLog::get_global_log(); \
+    logger.add(msg, level);                                \
+    logger.add(e.what(), level);                           \
+} catch(const ::std::exception& e) {                       \
+    auto& logger = ::putils::RuntimeLog::get_global_log(); \
+    logger.add(msg, level);                                \
+    logger.add(e.what(), level);                           \
+}                                                          \
+
 #define PUTILS_CATCH_LOG_GENERAL_INFO PUTILS_CATCH_LOG_GENERAL(::putils::RuntimeLog::Level::INFO)
 #define PUTILS_CATCH_LOG_GENERAL_WARN PUTILS_CATCH_LOG_GENERAL(::putils::RuntimeLog::Level::WARN)
 #define PUTILS_CATCH_LOG_GENERAL_ERROR PUTILS_CATCH_LOG_GENERAL(::putils::RuntimeLog::Level::ERROR)

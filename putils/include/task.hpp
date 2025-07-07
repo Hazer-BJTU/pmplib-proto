@@ -13,4 +13,8 @@ public:
     virtual void run() = 0;
 };
 
+Task::Task() {}
+
+Task::~Task() {}
+
 }
