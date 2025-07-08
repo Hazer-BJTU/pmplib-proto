@@ -65,7 +65,7 @@ bool TerminateCalls::execute_all_callbacks() noexcept {
 std::atomic<bool> RuntimeLog::initialized(false);
 std::string RuntimeLog::log_filepath("runtime_log.txt");
 size_t RuntimeLog::log_capacity = 256;
-RuntimeLog::Level RuntimeLog::log_level = RuntimeLog::Level::WARN;
+RuntimeLog::Level RuntimeLog::log_level = RuntimeLog::Level::INFO;
 std::mutex RuntimeLog::setting_lock;
 
 RuntimeLog::RuntimeLog(): flushing(false) {
@@ -100,7 +100,7 @@ bool RuntimeLog::set_global_log(
     size_t log_capacity
 ) noexcept {
     std::lock_guard<std::mutex> lock(RuntimeLog::setting_lock);
-    if (RuntimeLog::initialized.load(std::memory_order_relaxed)) {
+    if (RuntimeLog::initialized.load(std::memory_order_acquire)) {
         /* After an instance is created, its capacity is fixed. 
            Modifying the static member log_capacity will not take effect. */
         RuntimeLog::log_filepath = log_file_path;
@@ -119,9 +119,6 @@ RuntimeLog& RuntimeLog::get_global_log() noexcept {
 }
 
 void RuntimeLog::flush() {
-    if (!RuntimeLog::initialized.load(std::memory_order_relaxed)) {
-        return;
-    }
     if (flushing.exchange(true, std::memory_order_acq_rel)) {
         /* Only one thread can consume logs (i.e., store them to a file). 
            If multiple threads compete to consume logs, other threads will exit the flush() function.

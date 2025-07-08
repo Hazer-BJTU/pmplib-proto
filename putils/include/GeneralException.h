@@ -36,6 +36,7 @@ namespace putils {
 #endif
 
 template<typename Lambda>
+requires std::invocable<Lambda>
 class ScopeGuard {
 private:
     Lambda callback;
