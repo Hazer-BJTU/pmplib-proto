@@ -113,11 +113,12 @@ class LockFreeQueue {
 private:
     using DataPtr = std::shared_ptr<DataType>;
     static constexpr size_t DEFAULT_BUFFER_LENGTH = 1024;
+    static constexpr size_t CACHE_LINE_PADDING = 64;
     Container ring_buffer;
     Allocator element_allocator;
-    alignas(64) std::atomic<size_t> head;
-    alignas(64) std::atomic<size_t> tail;
-    alignas(64) std::atomic<size_t> qlen;
+    alignas(CACHE_LINE_PADDING) std::atomic<size_t> head;
+    alignas(CACHE_LINE_PADDING) std::atomic<size_t> tail;
+    alignas(CACHE_LINE_PADDING) std::atomic<size_t> qlen;
     size_t capacity, mask;
 public:
     explicit LockFreeQueue(size_t length = DEFAULT_BUFFER_LENGTH): 

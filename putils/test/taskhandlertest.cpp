@@ -37,7 +37,7 @@ int main() {
         for (int j = 0; j < MATRIX_SIZE; j++) {
             C[i * MATRIX_SIZE + j] = 0.0;
             for (int k = 0; k < MATRIX_SIZE; k++) {
-                C[i * MATRIX_SIZE + j] += A[i * MATRIX_SIZE + k] * B[k * MATRIX_SIZE + j];
+                C[i * MATRIX_SIZE + j] += A[i * MATRIX_SIZE + k] * B[j * MATRIX_SIZE + k];
             }
         }
     }
@@ -56,7 +56,7 @@ int main() {
                     for (int j = 0; j < size; j++) {
                         D[i * size + j] = 0.0;
                         for (int k = 0; k < size; k++) {
-                            D[i * size + j] += A[i * size + k] * B[k * size + j];
+                            D[i * size + j] += A[i * size + k] * B[j * size + k];
                         }
                     }
                 }
@@ -68,7 +68,7 @@ int main() {
     start = std::chrono::high_resolution_clock::now();
 
     auto& thread_pool = putils::ThreadPool::get_global_threadpool();
-    thread_pool.task_distribute(task_list);
+    thread_pool.submit(task_list);
     task_latch.wait();
 
     end = std::chrono::high_resolution_clock::now();
