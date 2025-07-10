@@ -51,7 +51,7 @@ int main() {
     putils::ThreadPool::TaskList task_list;
     for (int i = 0; i < MATRIX_SIZE; i += BLOCK_SZIE) {
         task_list.emplace_back(putils::wrap_task(
-            [&task_latch, A, B, D, size = MATRIX_SIZE, starting = i, ending = i + BLOCK_SZIE]() {
+            [&task_latch, size = MATRIX_SIZE, starting = i, ending = i + BLOCK_SZIE]() {
                 for (int i = starting; i < ending; i++) {
                     for (int j = 0; j < size; j++) {
                         D[i * size + j] = 0.0;

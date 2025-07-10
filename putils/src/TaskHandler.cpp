@@ -12,6 +12,9 @@ workers(), active_workers(num_workers), cv_lock(), cv_inactive(), cv_all_done(),
                 while(true) {
                     std::shared_ptr<Task> task_ptr;
                     if (task_queue->try_pop(task_ptr) && task_ptr) {
+                        /* Attempt to fetch a task from the queue; 
+                           if failed, use the empty() method to check whether 
+                           the queue is truly empty rather than a spurious failure. */
                         try {
                             task_ptr->run();
                         } PUTILS_CATCH_LOG_GENERAL_MSG(
@@ -20,10 +23,15 @@ workers(), active_workers(num_workers), cv_lock(), cv_inactive(), cv_all_done(),
                         )
                     } else if (task_queue->empty()) {
                         if (state.load(std::memory_order_acquire) == INACTIVE) {
+                            /* Check the flag 'state' to see if an INACTIVE signal is received.
+                               Here it shares the lock cv_lock with wait_all_done(),
+                               and both condition variables cv_inactive and cv_all_done share cv_lock. */
                             std::unique_lock<std::mutex> lock(cv_lock);
                             active_workers.fetch_sub(1, std::memory_order_acq_rel);
                             cv_all_done.notify_all();
                             cv_inactive.wait(lock, [this]() -> bool { 
+                                /* The condition variable cv_inactive blocks until state switches to ACTIVE or the flag quit becomes true.
+                                   Waiting threads will be notified when activate() is called or during destruction. */
                                 return state.load(std::memory_order_acquire) == ACTIVE || quit.load(std::memory_order_acquire);
                             });
                             if (quit.load(std::memory_order_acquire)) {
@@ -31,6 +39,7 @@ workers(), active_workers(num_workers), cv_lock(), cv_inactive(), cv_all_done(),
                             }
                             active_workers.fetch_add(1, std::memory_order_acq_rel);
                         } else {
+                            // Performs work stealing to fetch tasks from other queues.
                             task_ptr = ThreadPool::get_global_threadpool().work_stealing();
                             if (task_ptr) {
                                 try {
@@ -40,6 +49,7 @@ workers(), active_workers(num_workers), cv_lock(), cv_inactive(), cv_all_done(),
                                     RuntimeLog::Level::WARN
                                 )
                             } else {
+                                // Steal failed, yield the time slice.
                                 std::this_thread::yield();
                             }
                         }
@@ -98,11 +108,11 @@ ThreadPool::ThreadPool(): executors() {
 
 ThreadPool::~ThreadPool() {}
 
-TaskHandler& ThreadPool::get_executor() noexcept {
+size_t ThreadPool::get_executor_id() noexcept {
     thread_local std::mt19937 gen(seed_generator());
     thread_local std::uniform_int_distribution<size_t> udist(0, ThreadPool::num_executors - 1);
-    size_t executor_idx = udist(gen);
-    return *executors[executor_idx];
+    size_t executor_id = udist(gen);
+    return executor_id;
 }
 
 bool ThreadPool::set_global_threadpool(size_t num_executors, size_t executor_capacity, size_t num_workers_per_executor) noexcept {
@@ -146,10 +156,10 @@ ThreadPool& ThreadPool::get_global_threadpool() noexcept {
 
 void ThreadPool::submit(const TaskPtr& task) noexcept {
     while(true) {
-        auto& executor = get_executor();
-        bool successful = executor.task_queue->try_push(task);
+        size_t executor_id = get_executor_id();
+        bool successful = executors[executor_id]->task_queue->try_push(task);
         if (successful) {
-            executor.activate();
+            executors[executor_id]->activate();
             return;
         } else {
             std::this_thread::yield();
@@ -167,8 +177,13 @@ void ThreadPool::submit(const TaskList& task_list) noexcept {
 
 ThreadPool::TaskPtr ThreadPool::work_stealing() noexcept {
     TaskPtr task;
-    for (auto& executor: executors) {
-        if (executor->task_queue->try_pop(task)) {
+    size_t starting_id = get_executor_id();
+    for (
+        size_t id = starting_id, next_id = (id + 1 == ThreadPool::num_executors) ? 0 : id + 1; 
+        next_id != starting_id; 
+        id = next_id, next_id = (id + 1 == ThreadPool::num_executors) ? 0 : id + 1
+    ) {
+        if (executors[id]->task_queue->try_pop(task)) {
             return task;
         }
     }
