@@ -2,6 +2,10 @@
 
 namespace putils {
 
+Task::Task() {}
+
+Task::~Task() {}
+
 TaskHandler::TaskHandler(size_t num_workers, size_t queue_capacity): 
 workers(), active_workers(num_workers), cv_lock(), cv_inactive(), cv_all_done(), state(INACTIVE), quit(false) {
     try {
