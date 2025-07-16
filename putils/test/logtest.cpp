@@ -7,7 +7,7 @@
 using namespace putils;
 
 void test_logger_with_small_buffer() {
-    RuntimeLog::set_global_log("test_log.txt", RuntimeLog::Level::INFO);
+    RuntimeLog::set_global_log("test_log.txt", RuntimeLog::Level::INFO, 128);
     
     const int num_threads = 4;
     const int messages_per_thread = 100;

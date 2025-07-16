@@ -171,7 +171,9 @@ void RuntimeLog::flush() {
 void RuntimeLog::add(const std::string& message, Level level) {
     try {
         while(!log_buffer->try_enqueue(message, level)) {
-            flush();
+            if (log_buffer->size() > (RuntimeLog::log_capacity >> 1)) {
+                flush();
+            }
         }
     } PUTILS_CATCH_THROW_GENERAL
     return;
