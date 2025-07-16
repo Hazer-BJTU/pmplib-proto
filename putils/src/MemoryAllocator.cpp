@@ -88,7 +88,8 @@ MemBlock::~MemBlock() {
         for (BlockPtr p = this; p; p = p->next_block.get()) {
             if (!p->free.load(std::memory_order_acquire)) {
                 std::stringstream ss;
-                ss << "Block " << p << " with starting address [" << p->starting << "] is never released.";
+                ss << "Block " << p << " with starting address [" 
+                   << static_cast<void*>(p->starting) << "] is never released.";
                 logger.add(ss.str(), RuntimeLog::Level::WARN);
             }
         }
