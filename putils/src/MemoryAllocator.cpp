@@ -43,6 +43,15 @@ MemBlock::BlockHandle MemBlock::merge(BlockHandle handle) noexcept {
     BlockHandle p = handle;
     for (; p && p->free.load(std::memory_order_acquire); p = p->next_block) {
         accum += p->len_bytes;
+        if (p != handle) {
+            p->valid.store(false, std::memory_order_release);
+        }
+    }
+    BlockHandle delete_ptr = handle->next_block;
+    while(delete_ptr != p) {
+        auto tmp = delete_ptr->next_block;
+        delete_ptr->next_block.reset();
+        delete_ptr = tmp;
     }
     handle->next_block = p;
     if (p) {
@@ -53,7 +62,7 @@ MemBlock::BlockHandle MemBlock::merge(BlockHandle handle) noexcept {
 }
 
 MemBlock::MemBlock(bool header, size_t log_size):
-header(header), free(true), len_bytes(1u << log_size), starting(nullptr),
+header(header), free(true), valid(true), len_bytes(1u << log_size), starting(nullptr),
 next_block(nullptr), pre_block(nullptr), list_lock(nullptr) {
     if (header) {
         try {
@@ -87,6 +96,13 @@ MemBlock::~MemBlock() {
             std::free(starting);
             starting = nullptr;
         }
+        BlockHandle delete_ptr = next_block;
+        while(delete_ptr) {
+            auto tmp = delete_ptr->next_block;
+            delete_ptr->next_block.reset();
+            delete_ptr = tmp;
+        }
+        next_block.reset();
     }
 }
 
@@ -124,7 +140,7 @@ void MemBlock::compact(BlockHandle head) noexcept {
 }
 
 size_t MemBlock::length() const noexcept {
-    return !free.load(std::memory_order_acquire) ? len_bytes : 0;
+    return valid.load(std::memory_order_acquire) ? len_bytes : 0;
 }
 
 void MemBlock::release() noexcept {

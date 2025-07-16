@@ -18,7 +18,7 @@ private:
     static constexpr size_t DEFAULT_BLOCK_SIZE = 4194304;
     static constexpr size_t DEFAULT_MIN_BLOCK_SIZE = 4096;
     bool header;
-    std::atomic<bool> free;
+    std::atomic<bool> free, valid;
     size_t len_bytes;
     uPtr starting;
     BlockHandle next_block;
@@ -41,7 +41,7 @@ public:
     static void compact(BlockHandle head) noexcept;
     template<typename Type>
     Type* get() const noexcept {
-        return !free.load(std::memory_order_acquire) ? 
+        return valid.load(std::memory_order_acquire) ? 
         reinterpret_cast<Type*>(starting) : nullptr;
     }
     size_t length() const noexcept;
