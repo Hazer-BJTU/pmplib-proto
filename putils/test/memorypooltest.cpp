@@ -7,7 +7,7 @@ using namespace std;
 
 constexpr size_t num_tasks = 128;
 constexpr size_t test_per_task = 1024;
-constexpr auto method = putils::MemBlock::Method::FIRST_FIT;
+constexpr auto method = putils::MemBlock::Method::BEST_FIT;
 constexpr auto level = putils::RuntimeLog::Level::INFO;
 std::random_device seed_gen;
 

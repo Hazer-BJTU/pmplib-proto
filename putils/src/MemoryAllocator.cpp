@@ -115,11 +115,7 @@ MemBlock::BlockHandle MemBlock::make_head(size_t at_least) {
     return std::make_shared<MemBlock>(true, min_power);
 }
 
-MemBlock::BlockHandle MemBlock::assign(BlockHandle head, size_t target, Method method) {
-    if (!head || !head->header) {
-        return nullptr;
-    }
-    std::lock_guard<std::mutex> lock(*head->list_lock);
+MemBlock::BlockHandle MemBlock::internal_assign(BlockHandle head, size_t target, Method method) {
     size_t safe_target = (target + DEFAULT_ALIGNMENT - 1) / DEFAULT_ALIGNMENT * DEFAULT_ALIGNMENT;
     if (method == Method::FIRST_FIT) {
         for (BlockHandle p = head; p; p = p->next_block) {
@@ -131,29 +127,31 @@ MemBlock::BlockHandle MemBlock::assign(BlockHandle head, size_t target, Method m
             } PUTILS_CATCH_THROW_GENERAL
         }
     } else if (method == Method::BEST_FIT) {
-        std::vector<std::pair<BlockHandle, size_t>> chosen_blocks;
+        BlockHandle chosen = nullptr;
+        size_t min_gap = std::numeric_limits<size_t>::max();
         for (BlockHandle p = head; p; p = p->next_block) {
-            if (p->len_bytes >= safe_target) {
-                chosen_blocks.push_back(std::make_pair(p, p->len_bytes - safe_target));
-            }
-        }
-        std::sort(
-            chosen_blocks.begin(), 
-            chosen_blocks.end(), 
-            [](const auto& x, const auto& y) {
-                return x.second < y.second; 
-            }
-        );
-        for (auto& [block, gap]: chosen_blocks) {
-            try {
-                BlockHandle assigned = split(block, safe_target);
-                if (assigned) {
-                    return assigned;
+            if (p->free.load(std::memory_order_acquire) && p->len_bytes >= safe_target) {
+                if (p->len_bytes - safe_target <= min_gap) {
+                    min_gap = p->len_bytes - safe_target;
+                    chosen = p;
                 }
-            } PUTILS_CATCH_THROW_GENERAL
+            }
         }
+        try {
+            return split(chosen, safe_target);
+        } PUTILS_CATCH_THROW_GENERAL
     }
     return nullptr;
+}
+
+MemBlock::BlockHandle MemBlock::assign(BlockHandle head, size_t target, Method method) {
+    if (!head || !head->header) {
+        return nullptr;
+    }
+    std::lock_guard<std::mutex> lock(*head->list_lock);
+    try {
+        return internal_assign(head, target, method);
+    } PUTILS_CATCH_THROW_GENERAL
 }
 
 void MemBlock::compact(BlockHandle head) noexcept {
@@ -163,6 +161,17 @@ void MemBlock::compact(BlockHandle head) noexcept {
     std::lock_guard<std::mutex> lock(*head->list_lock);
     for (BlockHandle p = head; p; p = merge(p));
     return;
+}
+
+MemBlock::BlockHandle MemBlock::compact_and_assign(BlockHandle head, size_t target, Method method) {
+    if (!head || !head->header) {
+        return nullptr;
+    }
+    std::lock_guard<std::mutex> lock(*head->list_lock);
+    for (BlockHandle p = head; p; p = merge(p));
+    try {
+        return internal_assign(head, target, method);
+    } PUTILS_CATCH_THROW_GENERAL
 }
 
 size_t MemBlock::length() const noexcept {
@@ -231,9 +240,10 @@ MemoryPool::BlockHandle MemoryPool::try_allocate(size_t block_idx, size_t target
     try {
         auto handle = MemBlock::assign(block_list[block_idx], target, method);
         if (!handle) {
-            MemBlock::compact(block_list[block_idx]);
+            return MemBlock::compact_and_assign(block_list[block_idx], target, method);
+        } else {
+            return handle;
         }
-        return handle;
     } PUTILS_CATCH_THROW_GENERAL
 }
 
@@ -272,7 +282,7 @@ MemoryPool::MemView MemoryPool::report() noexcept {
     MemView result{0, 0, 0, std::numeric_limits<size_t>::max(), 0, 0};
     for (auto& head: block_list) {
         for (BlockHandle p = head; p; p = p->next_block) {
-            if (!p->free) {
+            if (!p->free.load(std::memory_order_acquire)) {
                 result.bytes_in_use += p->len_bytes;
             }
             result.bytes_total += p->len_bytes;

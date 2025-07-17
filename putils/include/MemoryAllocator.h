@@ -34,6 +34,11 @@ private:
     std::shared_ptr<std::mutex> list_lock;
     static BlockHandle split(BlockHandle handle, size_t target);
     static BlockHandle merge(BlockHandle handle) noexcept;
+    static BlockHandle internal_assign(
+        BlockHandle head,
+        size_t target,
+        Method method = Method::FIRST_FIT
+    );
     friend MemoryPool;
 public:
     MemBlock(
@@ -49,9 +54,14 @@ public:
     static BlockHandle assign(
         BlockHandle head, 
         size_t target, 
-        Method method = Method::BEST_FIT
+        Method method = Method::FIRST_FIT
     );
     static void compact(BlockHandle head) noexcept;
+    static BlockHandle compact_and_assign(
+        BlockHandle head,
+        size_t target,
+        Method method = Method::FIRST_FIT
+    );
     template<typename Type>
     Type* get() const noexcept {
         return valid.load(std::memory_order_acquire) ? 
