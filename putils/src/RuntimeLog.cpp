@@ -154,11 +154,11 @@ void RuntimeLog::flush() {
         };
         std::stringstream ss;
         while(log_buffer->try_pop(entry)) {
-            if (entry && entry->second >= log_level) {
-                ss << "[" << converter(entry->second) << "]: ";
-                ss << "Thread: " << get_local_thread_id() << ", time: " << get_local_time_r() << std::endl;
-                ss << entry->first;
-                if (entry->first.back() != '\n') {
+            if (entry && entry->lvl >= log_level) {
+                ss << "[" << converter(entry->lvl) << "]: ";
+                ss << "Thread: " << entry->tid << ", time: " << entry->tim << std::endl;
+                ss << entry->msg;
+                if (entry->msg.back() != '\n') {
                     ss << std::endl;
                 }
             }
@@ -170,7 +170,9 @@ void RuntimeLog::flush() {
 
 void RuntimeLog::add(const std::string& message, Level level) {
     try {
-        while(!log_buffer->try_enqueue(message, level)) {
+        auto thread_id = get_local_thread_id();
+        auto time_stamp = get_local_time_r();
+        while(!log_buffer->try_enqueue(message, level, thread_id, time_stamp)) {
             if (log_buffer->size() > (RuntimeLog::log_capacity >> 1)) {
                 flush();
             }

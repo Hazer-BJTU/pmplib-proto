@@ -106,7 +106,13 @@ public:
         INFO = 0, WARN = 1, ERROR = 2
     };
 private:
-    using Entry = std::pair<std::string, Level>;
+    /* using Entry = std::pair<std::string, Level>; */
+    struct Entry {
+        std::string msg;
+        Level lvl;
+        std::string tid;
+        std::string tim;
+    };
     using LFQ = LockFreeQueue<Entry>;
     static std::atomic<bool> initialized;
     static std::string log_filepath; //protected by setting_lock
