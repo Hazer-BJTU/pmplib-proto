@@ -175,6 +175,7 @@ void MemBlock::release() noexcept {
 
 std::random_device MemoryPool::seed_generator;
 size_t MemoryPool::num_blocks_reservation = 8;
+size_t MemoryPool::new_blocks_size = MemBlock::DEFAULT_BLOCK_SIZE;
 std::atomic<bool> MemoryPool::initialized = false;
 std::mutex MemoryPool::setting_lock;
 
@@ -182,31 +183,32 @@ MemoryPool::MemoryPool(): list_lock(), block_list() {
     std::lock_guard<std::mutex> lock(MemoryPool::setting_lock);
     MemoryPool::initialized.store(true, std::memory_order_release);
     for (size_t i = 0; i < MemoryPool::num_blocks_reservation; i++) {
-        block_list.push_back(MemBlock::make_head(MemBlock::DEFAULT_BLOCK_SIZE));
+        block_list.push_back(MemBlock::make_head(MemoryPool::new_blocks_size));
     }
 }
 
 MemoryPool::~MemoryPool() {}
 
-bool MemoryPool::set_global_memorypool(size_t num_blocks_reservation) noexcept {
+bool MemoryPool::set_global_memorypool(size_t num_blocks_reservation, size_t new_blocks_size) noexcept {
     auto& logger = RuntimeLog::get_global_log();
     std::lock_guard<std::mutex> lock(MemoryPool::setting_lock);
     if (MemoryPool::initialized.load(std::memory_order_acquire)) {
         logger.add("(MemoryPool): Settings cannot be modified after the instance has been initialized.");
         return false;
     }
-    if (num_blocks_reservation == 0) {
+    if (num_blocks_reservation == 0 || new_blocks_size == 0) {
         logger.add("(MemoryPool): All numeric arguments must be positive integers.");
         return false;
     }
     MemoryPool::num_blocks_reservation = num_blocks_reservation;
+    MemoryPool::new_blocks_size = new_blocks_size;
 
     std::stringstream ss;
-    size_t bytes = MemoryPool::num_blocks_reservation * MemBlock::DEFAULT_BLOCK_SIZE;
+    size_t bytes = MemoryPool::num_blocks_reservation * new_blocks_size;
     size_t kilobytes = bytes / 1024;
     size_t megabytes = kilobytes / 1024;
     size_t gigabytes = megabytes / 1024;
-    ss << "(MemoryPool): potential memory usage ";
+    ss << "(MemoryPool): initial memory reservation ";
     if (gigabytes > 0) {
         ss << gigabytes << "GB";
     } else if (megabytes > 0) {
@@ -237,7 +239,7 @@ MemoryPool::BlockHandle MemoryPool::try_allocate(size_t block_idx, size_t target
 
 MemoryPool::BlockHandle MemoryPool::extend_and_allocate(size_t target) {
     try {
-        block_list.push_back(MemBlock::make_head(std::max<size_t>(target, MemBlock::DEFAULT_BLOCK_SIZE)));
+        block_list.push_back(MemBlock::make_head(std::max<size_t>(target, MemoryPool::new_blocks_size)));
     } PUTILS_CATCH_THROW_GENERAL
     auto handle = MemBlock::assign(block_list.back(), target, MemBlock::Method::FIRST_FIT);
     return handle;

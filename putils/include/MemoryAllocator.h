@@ -77,6 +77,7 @@ private:
     using BlockList = std::vector<BlockHandle>;
     static std::random_device seed_generator;
     static size_t num_blocks_reservation;
+    static size_t new_blocks_size;
     static std::atomic<bool> initialized;
     static std::mutex setting_lock;
     std::shared_mutex list_lock;
@@ -95,7 +96,8 @@ public:
     MemoryPool(MemoryPool&&) = delete;
     MemoryPool& operator = (MemoryPool&&) = delete;
     static bool set_global_memorypool(
-        size_t num_blocks_reservation = MemoryPool::num_blocks_reservation
+        size_t num_blocks_reservation = MemoryPool::num_blocks_reservation,
+        size_t new_blocks_size = MemoryPool::new_blocks_size
     ) noexcept;
     static MemoryPool& get_global_memorypool() noexcept;
     BlockHandle allocate(
