@@ -225,4 +225,63 @@ MemoryPool& MemoryPool::get_global_memorypool() noexcept {
     return memorypool_instance;
 }
 
+MemoryPool::BlockHandle MemoryPool::try_allocate(size_t block_idx, size_t target, MemBlock::Method method) {
+    try {
+        auto handle = MemBlock::assign(block_list[block_idx], target, method);
+        if (!handle) {
+            MemBlock::compact(block_list[block_idx]);
+        }
+        return handle;
+    } PUTILS_CATCH_THROW_GENERAL
+}
+
+MemoryPool::BlockHandle MemoryPool::extend_and_allocate(size_t target) {
+    try {
+        block_list.push_back(MemBlock::make_head(std::max<size_t>(target, MemBlock::DEFAULT_BLOCK_SIZE)));
+    } PUTILS_CATCH_THROW_GENERAL
+    auto handle = MemBlock::assign(block_list.back(), target, MemBlock::Method::FIRST_FIT);
+    return handle;
+}
+
+MemoryPool::BlockHandle MemoryPool::allocate(size_t target, MemBlock::Method method) {
+    thread_local std::mt19937 gen(MemoryPool::seed_generator());
+    try {
+        std::shared_lock<std::shared_mutex> slock(list_lock);
+        std::uniform_int_distribution<size_t> udist(0, block_list.size() - 1);
+        size_t starting_idx = udist(gen);
+        for (
+            size_t id = starting_idx, next_id = id + 1 == block_list.size() ? 0 : id + 1;
+            next_id != starting_idx;
+            id = next_id, next_id = id + 1 == block_list.size() ? 0 : id + 1
+        ) {
+            auto handle = try_allocate(id, target, method);
+            if (handle) {
+                return handle;
+            }
+        }
+        slock.unlock();
+        std::unique_lock<std::shared_mutex> xlock(list_lock);
+        return extend_and_allocate(target);
+    } PUTILS_CATCH_THROW_GENERAL
+}
+
+MemoryPool::MemView MemoryPool::report() noexcept {
+    std::unique_lock<std::shared_mutex> xlock(list_lock);
+    MemView result{0, 0, 0, std::numeric_limits<size_t>::max(), 0, 0};
+    for (auto& head: block_list) {
+        for (BlockHandle p = head; p; p = p->next_block) {
+            if (!p->free) {
+                result.bytes_in_use += p->len_bytes;
+            }
+            result.bytes_total += p->len_bytes;
+            result.max_block_size = std::max<size_t>(result.max_block_size, p->len_bytes);
+            result.min_block_size = std::min<size_t>(result.min_block_size, p->len_bytes);
+            result.num_blocks += 1;
+        }
+    }
+    result.avg_block_size = result.bytes_total / result.num_blocks;
+    result.use_ratio = result.bytes_in_use * 1.0f / result.bytes_total;
+    return result;
+}
+
 }

@@ -62,6 +62,16 @@ public:
 };
 
 class MemoryPool {
+public:
+    struct MemView {
+        size_t bytes_in_use;
+        size_t bytes_total;
+        size_t max_block_size;
+        size_t min_block_size;
+        size_t avg_block_size;
+        size_t num_blocks;
+        float use_ratio;
+    };
 private:
     using BlockHandle = std::shared_ptr<MemBlock>;
     using BlockList = std::vector<BlockHandle>;
@@ -73,6 +83,12 @@ private:
     BlockList block_list;
     MemoryPool();
     ~MemoryPool();
+    MemoryPool::BlockHandle extend_and_allocate(size_t target);
+    BlockHandle try_allocate(
+        size_t block_idx,
+        size_t target,
+        MemBlock::Method method = MemBlock::Method::FIRST_FIT
+    );
 public:
     MemoryPool(const MemoryPool&) = delete;
     MemoryPool& operator = (const MemoryPool&) = delete;
@@ -82,6 +98,11 @@ public:
         size_t num_blocks_reservation = MemoryPool::num_blocks_reservation
     ) noexcept;
     static MemoryPool& get_global_memorypool() noexcept;
+    BlockHandle allocate(
+        size_t target,
+        MemBlock::Method method = MemBlock::Method::FIRST_FIT
+    );
+    MemView report() noexcept;
 };
 
 }

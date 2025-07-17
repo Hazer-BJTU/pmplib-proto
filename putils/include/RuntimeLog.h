@@ -129,7 +129,11 @@ public:
     RuntimeLog& operator = (const RuntimeLog&) = delete;
     RuntimeLog(RuntimeLog&&) = delete;
     RuntimeLog& operator = (RuntimeLog&&) = delete;
-    static bool set_global_log(const std::string& log_file_path, Level log_level, size_t log_capacity = RuntimeLog::log_capacity) noexcept;
+    static bool set_global_log(
+        const std::string& log_file_path = RuntimeLog::log_filepath,
+        Level log_level = RuntimeLog::log_level,
+        size_t log_capacity = RuntimeLog::log_capacity
+    ) noexcept;
     static RuntimeLog& get_global_log() noexcept;
     void flush();
     void add(const std::string& message, Level level = Level::INFO);
