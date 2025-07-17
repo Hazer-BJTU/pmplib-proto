@@ -13,7 +13,7 @@ std::random_device seed_gen;
 
 int main() {
     using ull = unsigned long long;
-    putils::MemoryPool::set_global_memorypool();
+    putils::MemoryPool::set_global_memorypool(16, 2 * 1024 * 1024);
     auto& memory_pool = putils::MemoryPool::get_global_memorypool();
     putils::ThreadPool::set_global_threadpool();
     auto& thread_pool = putils::ThreadPool::get_global_threadpool();
@@ -64,6 +64,7 @@ int main() {
     std::cout << "Min block size: " << view.min_block_size << std::endl;
     std::cout << "Max block size: " << view.max_block_size << std::endl;
     std::cout << "Bytes in use: " << view.bytes_in_use << std::endl;
-    std::cout << "Usage ratio: " << view.use_ratio << std::endl;
+    std::cout << "Usage ratio: " << std::fixed << std::setprecision(2) << view.use_ratio * 100 << "\%" << std::endl;
+    std::cout << "Total memory usage: " << putils::MemoryPool::human(view.bytes_total) << std::endl;
     return 0;
 }

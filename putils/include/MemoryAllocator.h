@@ -115,6 +115,7 @@ public:
         MemBlock::Method method = MemBlock::Method::FIRST_FIT
     );
     MemView report() noexcept;
+    static std::string human(size_t bytes) noexcept;
 };
 
 }

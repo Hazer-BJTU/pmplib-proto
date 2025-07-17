@@ -116,6 +116,9 @@ MemBlock::BlockHandle MemBlock::make_head(size_t at_least) {
 }
 
 MemBlock::BlockHandle MemBlock::internal_assign(BlockHandle head, size_t target, Method method) {
+    if (!head || !head->header) {
+        return nullptr;
+    }
     size_t safe_target = (target + DEFAULT_ALIGNMENT - 1) / DEFAULT_ALIGNMENT * DEFAULT_ALIGNMENT;
     if (method == Method::FIRST_FIT) {
         for (BlockHandle p = head; p; p = p->next_block) {
@@ -214,19 +217,7 @@ bool MemoryPool::set_global_memorypool(size_t num_blocks_reservation, size_t new
 
     std::stringstream ss;
     size_t bytes = MemoryPool::num_blocks_reservation * new_blocks_size;
-    size_t kilobytes = bytes / 1024;
-    size_t megabytes = kilobytes / 1024;
-    size_t gigabytes = megabytes / 1024;
-    ss << "(MemoryPool): initial memory reservation ";
-    if (gigabytes > 0) {
-        ss << gigabytes << "GB";
-    } else if (megabytes > 0) {
-        ss << megabytes << "MB";
-    } else if (kilobytes > 0) {
-        ss << kilobytes << "KB";
-    } else {
-        ss << bytes << "B";
-    }
+    ss << "(MemoryPool): initial memory reservation " << human(bytes);
     logger.add(ss.str());
     return true;
 }
@@ -281,6 +272,7 @@ MemoryPool::MemView MemoryPool::report() noexcept {
     std::unique_lock<std::shared_mutex> xlock(list_lock);
     MemView result{0, 0, 0, std::numeric_limits<size_t>::max(), 0, 0};
     for (auto& head: block_list) {
+        std::lock_guard<std::mutex> lock(*head->list_lock);
         for (BlockHandle p = head; p; p = p->next_block) {
             if (!p->free.load(std::memory_order_acquire)) {
                 result.bytes_in_use += p->len_bytes;
@@ -291,9 +283,26 @@ MemoryPool::MemView MemoryPool::report() noexcept {
             result.num_blocks += 1;
         }
     }
-    result.avg_block_size = result.bytes_total / result.num_blocks;
-    result.use_ratio = result.bytes_in_use * 1.0f / result.bytes_total;
+    result.avg_block_size = result.bytes_total / std::max<size_t>(result.num_blocks, 1);
+    result.use_ratio = result.bytes_in_use * 1.0f / std::max<size_t>(result.bytes_total, 1);
     return result;
+}
+
+std::string MemoryPool::human(size_t bytes) noexcept {
+    std::stringstream ss;
+    float kilobytes = bytes / 1024.0f;
+    float megabytes = kilobytes / 1024.0f;
+    float gigabytes = megabytes / 1024.0f;
+    if (gigabytes >= 1.0) {
+        ss << std::fixed << std::setprecision(2) << gigabytes << "GB";
+    } else if (megabytes >= 1.0) {
+        ss << std::fixed << std::setprecision(2) << megabytes << "MB";
+    } else if (kilobytes >= 1.0) {
+        ss << std::fixed << std::setprecision(2) << kilobytes << "KB";
+    } else {
+        ss << bytes << "B";
+    }
+    return ss.str();
 }
 
 }
