@@ -2,222 +2,239 @@
 
 namespace putils {
 
-MemBlock::BlockHandle MemBlock::split(BlockHandle handle, size_t target) {
-    if (!handle || !handle->free.load(std::memory_order_acquire)) {
-        return nullptr;
-    }
-    /* size_t safe_target = (target + DEFAULT_ALIGNMENT - 1) / DEFAULT_ALIGNMENT * DEFAULT_ALIGNMENT; */
-    if (handle->len_bytes < target) {
-        return nullptr;
-    } else if (handle->len_bytes == target) {
-        handle->free.store(false, std::memory_order_release);
-        return handle;
-    } else if (handle->len_bytes > target) {
-        try {
-            BlockHandle new_handle = std::make_shared<MemBlock>(false);
-            new_handle->len_bytes = handle->len_bytes - target;
-            new_handle->starting = handle->starting + target;
-            new_handle->next_block = handle->next_block;
-            new_handle->pre_block = handle.get();
-            new_handle->list_lock = handle->list_lock;
-            if (handle->next_block) {
-                handle->next_block->pre_block = new_handle.get();
-            }
-            handle->next_block = new_handle;
-            handle->len_bytes = target;
-            handle->free.store(false, std::memory_order_release);
-            return handle;
-        } PUTILS_CATCH_THROW_GENERAL
-    }
-    return nullptr;
-}
-
-MemBlock::BlockHandle MemBlock::merge(BlockHandle handle) noexcept {
-    if (!handle) {
-        return nullptr;
-    }
-    if (!handle->free.load(std::memory_order_acquire)) {
-        return handle->next_block;
-    }
-    size_t accum = 0;
-    BlockHandle p = handle;
-    for (; p && p->free.load(std::memory_order_acquire); p = p->next_block) {
-        accum += p->len_bytes;
-        if (p != handle) {
-            p->valid.store(false, std::memory_order_release);
-        }
-    }
-    BlockHandle delete_ptr = handle->next_block;
-    while(delete_ptr != p) {
-        auto tmp = delete_ptr->next_block;
-        delete_ptr->next_block.reset();
-        delete_ptr = tmp;
-    }
-    handle->next_block = p;
-    if (p) {
-        p->pre_block = handle.get();
-    }
-    handle->len_bytes = accum;
-    return p;
-}
-
-MemBlock::MemBlock(bool header, size_t log_size):
-header(header), free(true), valid(true), len_bytes(1u << log_size), starting(nullptr),
-next_block(nullptr), pre_block(nullptr), list_lock(nullptr) {
+MemBlock::MemBlock(bool header, size_t log_len, HeadBlock& head_block):
+header(header), free(true), len_bytes(0), head_block(head_block),
+starting(nullptr), pre_block(nullptr), nex_block(nullptr) {
     if (header) {
+        len_bytes = 1ull << log_len;
         try {
-            if (len_bytes < DEFAULT_MIN_BLOCK_SIZE) {
-                std::stringstream ss;
-                ss << "Block size must be at least " << DEFAULT_MIN_BLOCK_SIZE << ".";
-                throw PUTILS_GENERAL_EXCEPTION(ss.str(), "invalid argument");
-            }
-            starting = reinterpret_cast<uPtr>(std::aligned_alloc(DEFAULT_ALIGNMENT, len_bytes));
+            starting = reinterpret_cast<uPtr>(
+                std::aligned_alloc(
+                    DEFAULT_ALIGNMENT, 
+                    std::max<size_t>(DEFAULT_MIN_BLOCK_SIZE, len_bytes)
+                )
+            );
             if (!starting) {
                 throw std::bad_alloc();
             }
-            list_lock = std::make_shared<std::mutex>();
         } PUTILS_CATCH_THROW_GENERAL
-    } else {
-        len_bytes = 0;
     }
 }
 
 MemBlock::~MemBlock() {
-    if (header) {
+    if (starting && !free.load(std::memory_order_acquire)) {
         auto& logger = RuntimeLog::get_global_log();
-        for (BlockPtr p = this; p; p = p->next_block.get()) {
-            if (!p->free.load(std::memory_order_acquire)) {
-                std::stringstream ss;
-                ss << "Block " << p << " with starting address [" 
-                   << static_cast<void*>(p->starting) << "] is never released.";
-                logger.add(ss.str(), RuntimeLog::Level::WARN);
-            }
-        }
+        std::stringstream ss;
+        ss << "Block " << this << " with starting address [" 
+           << static_cast<void*>(starting) << "] is never released.";
+        logger.add(ss.str(), RuntimeLog::Level::WARN);
+    }
+    if (header) {
         if (starting) {
             std::free(starting);
             starting = nullptr;
         }
-        BlockHandle delete_ptr = next_block;
-        while(delete_ptr) {
-            auto tmp = delete_ptr->next_block;
-            delete_ptr->next_block.reset();
-            delete_ptr = tmp;
-        }
-        next_block.reset();
     }
 }
 
-MemBlock::BlockHandle MemBlock::make_head(size_t at_least) {
-    size_t min_power = 0;
-    while((1u << min_power) < std::max<size_t>(at_least, DEFAULT_MIN_BLOCK_SIZE)) {
-        min_power++;
-    }
-    return std::make_shared<MemBlock>(true, min_power);
+void release(MemBlock::BlockHandle& handle) noexcept {
+    handle->free.store(true, std::memory_order_release);
+    handle = nullptr;
+    return;
 }
 
-MemBlock::BlockHandle MemBlock::internal_assign(BlockHandle head, size_t target, Method method) {
-    if (!head || !head->header) {
-        return nullptr;
+std::string human(size_t bytes) noexcept {
+    std::stringstream ss;
+    float kilo_bytes = bytes / 1024.0f;
+    float mega_bytes = kilo_bytes / 1024.0f;
+    float giga_bytes = mega_bytes / 1024.0f;
+    if (giga_bytes >= 1.0) {
+        ss << std::fixed << std::setprecision(2) << giga_bytes << "GB";
+    } else if (mega_bytes >= 1.0) {
+        ss << std::fixed << std::setprecision(2) << mega_bytes << "MB";
+    } else if (kilo_bytes >= 1.0) {
+        ss << std::fixed << std::setprecision(2) << kilo_bytes << "KB";
+    } else {
+        ss << bytes << "B";
     }
-    size_t safe_target = (target + DEFAULT_ALIGNMENT - 1) / DEFAULT_ALIGNMENT * DEFAULT_ALIGNMENT;
+    return ss.str();
+}
+
+HeadBlock::HeadBlock(size_t initial): list_lock() {
+    num_blocks = 1;
+    first = new MemBlock(true, std::countr_zero(std::bit_ceil(initial)), *this);
+    total_len_bytes = first->len_bytes;
+    last = first;
+}
+
+HeadBlock::~HeadBlock() {
+    for (
+        BlockHandle p = first, np = p ? p->nex_block : nullptr; p;
+        p = np /* P = NP :-) */, np = p ? p->nex_block : nullptr
+    ) {
+        delete p;
+        p = nullptr;
+    }
+}
+
+HeadBlock::BlockHandle HeadBlock::internal_assign(size_t target, Method method) {
+    BlockHandle chosen = nullptr;
+    size_t safe_target = (target + MemBlock::DEFAULT_ALIGNMENT - 1) / MemBlock::DEFAULT_ALIGNMENT * MemBlock::DEFAULT_ALIGNMENT;
     if (method == Method::FIRST_FIT) {
-        for (BlockHandle p = head; p; p = p->next_block) {
-            try {
-                BlockHandle assigned = split(p, safe_target);
-                if (assigned) {
-                    return assigned;
-                }
-            } PUTILS_CATCH_THROW_GENERAL
+        for (BlockHandle p = first; p; p = p->nex_block) {
+            if (p->free.load(std::memory_order_acquire) && p->len_bytes >= safe_target) {
+                chosen = p;
+                break;
+            }
         }
     } else if (method == Method::BEST_FIT) {
-        BlockHandle chosen = nullptr;
         size_t min_gap = std::numeric_limits<size_t>::max();
-        for (BlockHandle p = head; p; p = p->next_block) {
+        for (BlockHandle p = first; p; p = p->nex_block) {
             if (p->free.load(std::memory_order_acquire) && p->len_bytes >= safe_target) {
-                if (p->len_bytes - safe_target <= min_gap) {
+                if (p->len_bytes - safe_target < min_gap) {
                     min_gap = p->len_bytes - safe_target;
                     chosen = p;
                 }
             }
         }
-        try {
-            return split(chosen, safe_target);
-        } PUTILS_CATCH_THROW_GENERAL
     }
-    return nullptr;
-}
-
-MemBlock::BlockHandle MemBlock::assign(BlockHandle head, size_t target, Method method) {
-    if (!head || !head->header) {
+    if (!chosen) {
         return nullptr;
     }
-    std::lock_guard<std::mutex> lock(*head->list_lock);
+    if (chosen->len_bytes == safe_target) {
+        chosen->free.store(false, std::memory_order_release);
+        return chosen;
+    }
     try {
-        return internal_assign(head, target, method);
+        num_blocks++;
+        BlockHandle new_block = new MemBlock(false, 0, *this);
+        new_block->len_bytes = chosen->len_bytes - safe_target;
+        new_block->starting = chosen->starting + safe_target;
+        new_block->pre_block = chosen;
+        new_block->nex_block = chosen->nex_block;
+        if (chosen->nex_block) {
+            chosen->nex_block->pre_block = new_block;
+        }
+        chosen->nex_block = new_block;
+        chosen->len_bytes = safe_target;
+        chosen->free.store(false, std::memory_order_release);
+        if (chosen == last) {
+            last = new_block;
+        }
+        return chosen;
     } PUTILS_CATCH_THROW_GENERAL
 }
 
-void MemBlock::compact(BlockHandle head) noexcept {
-    if (!head || !head->header) {
-        return;
-    }
-    std::lock_guard<std::mutex> lock(*head->list_lock);
-    for (BlockHandle p = head; p; p = merge(p));
+void HeadBlock::internal_extend(size_t at_least) {
+    size_t new_bytes = std::bit_ceil(std::max<size_t>(at_least, total_len_bytes));
+    try {
+        num_blocks++;
+        BlockHandle new_block = new MemBlock(true, std::countr_zero(new_bytes), *this);
+        total_len_bytes += new_block->len_bytes;
+        new_block->pre_block = last;
+        last->nex_block = new_block;
+        last = new_block;
+    } PUTILS_CATCH_THROW_GENERAL
     return;
 }
 
-MemBlock::BlockHandle MemBlock::compact_and_assign(BlockHandle head, size_t target, Method method) {
-    if (!head || !head->header) {
-        return nullptr;
+void HeadBlock::internal_compact() noexcept {
+    BlockHandle curr = first;
+    while(curr && curr->nex_block) {
+        BlockHandle neighbor = curr->nex_block;
+        if (
+            curr->free.load(std::memory_order_acquire) &&
+            neighbor->free.load(std::memory_order_acquire) && 
+            !neighbor->header
+        ) {
+            curr->len_bytes += neighbor->len_bytes;
+            curr->nex_block = neighbor->nex_block;
+            if (neighbor->nex_block) {
+                neighbor->nex_block->pre_block = curr;
+            }
+            num_blocks--;
+            if (neighbor == last) {
+                last = curr;
+            }
+            delete neighbor;
+            neighbor = nullptr;
+        } else {
+            curr = neighbor;
+        }
     }
-    std::lock_guard<std::mutex> lock(*head->list_lock);
-    for (BlockHandle p = head; p; p = merge(p));
+    return;
+}
+
+HeadBlock::BlockHandle HeadBlock::try_assign(size_t target, Method method) {
+    std::lock_guard<std::mutex> lock(list_lock);
     try {
-        return internal_assign(head, target, method);
+        return internal_assign(target, method);
     } PUTILS_CATCH_THROW_GENERAL
 }
 
-size_t MemBlock::length() const noexcept {
-    return valid.load(std::memory_order_acquire) ? len_bytes : 0;
+HeadBlock::BlockHandle HeadBlock::extend_and_assign(size_t target, Method method) {
+    std::lock_guard<std::mutex> lock(list_lock);
+    try {
+        internal_extend(target);
+        return internal_assign(target, method);
+    } PUTILS_CATCH_THROW_GENERAL
 }
 
-void MemBlock::release() noexcept {
-    free.store(true, std::memory_order_release);
+HeadBlock::BlockHandle HeadBlock::compact_and_assign(size_t target, Method method) {
+    std::lock_guard<std::mutex> lock(list_lock);
+    try {
+        internal_compact();
+        return internal_assign(target, method);
+    } PUTILS_CATCH_THROW_GENERAL
+}
+
+HeadBlock::BlockHandle HeadBlock::assign_and_compact(size_t target, Method method) {
+    std::lock_guard<std::mutex> lock(list_lock);
+    try {
+        BlockHandle handle = internal_assign(target, method);
+        if (handle) {
+            return handle;
+        } else {
+            internal_compact();
+            return nullptr;
+        }
+    } PUTILS_CATCH_THROW_GENERAL
 }
 
 std::random_device MemoryPool::seed_generator;
-size_t MemoryPool::num_blocks_reservation = 8;
-size_t MemoryPool::new_blocks_size = MemBlock::DEFAULT_BLOCK_SIZE;
+size_t MemoryPool::num_lists_reservation = 16;
+size_t MemoryPool::initialization_block_size = 4194304;
 std::atomic<bool> MemoryPool::initialized = false;
 std::mutex MemoryPool::setting_lock;
 
-MemoryPool::MemoryPool(): list_lock(), block_list() {
-    std::lock_guard<std::mutex> lock(MemoryPool::setting_lock);
+MemoryPool::MemoryPool() {
+    std::lock_guard<std::mutex> lock(setting_lock);
     MemoryPool::initialized.store(true, std::memory_order_release);
-    for (size_t i = 0; i < MemoryPool::num_blocks_reservation; i++) {
-        block_list.push_back(MemBlock::make_head(MemoryPool::new_blocks_size));
-    }
+    try {
+        for (size_t i = 0; i < MemoryPool::num_lists_reservation; i++) {
+            list.push_back(std::make_unique<HeadBlock>(MemoryPool::initialization_block_size));
+        }
+    } PUTILS_CATCH_THROW_GENERAL
 }
 
 MemoryPool::~MemoryPool() {}
 
-bool MemoryPool::set_global_memorypool(size_t num_blocks_reservation, size_t new_blocks_size) noexcept {
+bool MemoryPool::set_global_memorypool(size_t num_lists_reservation, size_t initialization_block_size) noexcept {
     auto& logger = RuntimeLog::get_global_log();
     std::lock_guard<std::mutex> lock(MemoryPool::setting_lock);
     if (MemoryPool::initialized.load(std::memory_order_acquire)) {
         logger.add("(MemoryPool): Settings cannot be modified after the instance has been initialized.");
         return false;
     }
-    if (num_blocks_reservation == 0 || new_blocks_size == 0) {
+    if (num_lists_reservation == 0 || initialization_block_size == 0) {
         logger.add("(MemoryPool): All numeric arguments must be positive integers.");
         return false;
     }
-    MemoryPool::num_blocks_reservation = num_blocks_reservation;
-    MemoryPool::new_blocks_size = new_blocks_size;
-
+    MemoryPool::num_lists_reservation = num_lists_reservation;
+    MemoryPool::initialization_block_size = initialization_block_size;
+    size_t total = MemoryPool::num_lists_reservation * std::max<size_t>(MemoryPool::initialization_block_size, MemBlock::DEFAULT_MIN_BLOCK_SIZE);
     std::stringstream ss;
-    size_t bytes = MemoryPool::num_blocks_reservation * new_blocks_size;
-    ss << "(MemoryPool): initial memory reservation " << human(bytes);
+    ss << "(MemoryPool): initialization storage size: " << human(total);
     logger.add(ss.str());
     return true;
 }
@@ -227,82 +244,42 @@ MemoryPool& MemoryPool::get_global_memorypool() noexcept {
     return memorypool_instance;
 }
 
-MemoryPool::BlockHandle MemoryPool::try_allocate(size_t block_idx, size_t target, MemBlock::Method method) {
-    try {
-        auto handle = MemBlock::assign(block_list[block_idx], target, method);
-        if (!handle) {
-            return MemBlock::compact_and_assign(block_list[block_idx], target, method);
-        } else {
-            return handle;
-        }
-    } PUTILS_CATCH_THROW_GENERAL
-}
-
-MemoryPool::BlockHandle MemoryPool::extend_and_allocate(size_t target) {
-    try {
-        block_list.push_back(MemBlock::make_head(std::max<size_t>(target, MemoryPool::new_blocks_size)));
-    } PUTILS_CATCH_THROW_GENERAL
-    auto handle = MemBlock::assign(block_list.back(), target, MemBlock::Method::FIRST_FIT);
-    return handle;
-}
-
-MemoryPool::BlockHandle MemoryPool::allocate(size_t target, MemBlock::Method method) {
+MemoryPool::BlockHandle MemoryPool::allocate(size_t target, HeadBlock::Method method) {
     thread_local std::mt19937 gen(MemoryPool::seed_generator());
+    thread_local std::uniform_int_distribution<size_t> udist(0, MemoryPool::num_lists_reservation - 1);
+    size_t starting_idx = udist(gen);
     try {
-        std::shared_lock<std::shared_mutex> slock(list_lock);
-        std::uniform_int_distribution<size_t> udist(0, block_list.size() - 1);
-        size_t starting_idx = udist(gen);
         for (
-            size_t id = starting_idx, next_id = id + 1 == block_list.size() ? 0 : id + 1;
-            next_id != starting_idx;
-            id = next_id, next_id = id + 1 == block_list.size() ? 0 : id + 1
+            size_t idx = starting_idx, nex_idx = idx + 1 == MemoryPool::num_lists_reservation ? 0 : idx + 1;
+            nex_idx != starting_idx;
+            idx = nex_idx, nex_idx = idx + 1 == MemoryPool::num_lists_reservation ? 0 : idx + 1
         ) {
-            auto handle = try_allocate(id, target, method);
+            BlockHandle handle = list[idx]->assign_and_compact(target, method);
             if (handle) {
                 return handle;
             }
         }
-        slock.unlock();
-        std::unique_lock<std::shared_mutex> xlock(list_lock);
-        return extend_and_allocate(target);
+        return list[starting_idx]->extend_and_assign(target, method);
     } PUTILS_CATCH_THROW_GENERAL
 }
 
 MemoryPool::MemView MemoryPool::report() noexcept {
-    std::unique_lock<std::shared_mutex> xlock(list_lock);
-    MemView result{0, 0, 0, std::numeric_limits<size_t>::max(), 0, 0};
-    for (auto& head: block_list) {
-        std::lock_guard<std::mutex> lock(*head->list_lock);
-        for (BlockHandle p = head; p; p = p->next_block) {
-            if (!p->free.load(std::memory_order_acquire)) {
-                result.bytes_in_use += p->len_bytes;
+    MemView view = {0, 0, 0, std::numeric_limits<size_t>::max(), 0, 0};
+    for (auto& head: list) {
+        std::lock_guard<std::mutex> lock(head->list_lock);
+        for (BlockHandle p = head->first; p; p = p->nex_block) {
+            view.bytes_total += p->len_bytes;
+            view.num_blocks++;
+            view.max_block_size = std::max<size_t>(view.max_block_size, p->len_bytes);
+            view.min_block_size = std::min<size_t>(view.min_block_size, p->len_bytes);
+            if (p->free.load(std::memory_order_acquire)) {
+                view.bytes_in_use += p->len_bytes;
             }
-            result.bytes_total += p->len_bytes;
-            result.max_block_size = std::max<size_t>(result.max_block_size, p->len_bytes);
-            result.min_block_size = std::min<size_t>(result.min_block_size, p->len_bytes);
-            result.num_blocks += 1;
         }
     }
-    result.avg_block_size = result.bytes_total / std::max<size_t>(result.num_blocks, 1);
-    result.use_ratio = result.bytes_in_use * 1.0f / std::max<size_t>(result.bytes_total, 1);
-    return result;
-}
-
-std::string MemoryPool::human(size_t bytes) noexcept {
-    std::stringstream ss;
-    float kilobytes = bytes / 1024.0f;
-    float megabytes = kilobytes / 1024.0f;
-    float gigabytes = megabytes / 1024.0f;
-    if (gigabytes >= 1.0) {
-        ss << std::fixed << std::setprecision(2) << gigabytes << "GB";
-    } else if (megabytes >= 1.0) {
-        ss << std::fixed << std::setprecision(2) << megabytes << "MB";
-    } else if (kilobytes >= 1.0) {
-        ss << std::fixed << std::setprecision(2) << kilobytes << "KB";
-    } else {
-        ss << bytes << "B";
-    }
-    return ss.str();
+    view.avg_block_size = view.bytes_total / std::max<size_t>(view.num_blocks, 1);
+    view.usage_ratio = view.bytes_in_use * 1.0f / std::max<size_t>(view.bytes_total, 1);
+    return view;
 }
 
 }

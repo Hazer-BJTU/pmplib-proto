@@ -5,13 +5,16 @@
 
 using namespace std;
 
+/*
 constexpr size_t total_size = 4 * 1024 * 1024;
 constexpr int num_test = 1000;
 constexpr int num_tasks = 128;
+*/
 
 std::random_device rd;
 
 int main() {
+    /*
     using ull = unsigned long long;
     auto memory_pool = putils::MemBlock::make_head(total_size);
 
@@ -65,5 +68,6 @@ int main() {
     }
     ss << " }" << std::endl;
     logger.add(ss.str());
+    */
     return 0;
 }

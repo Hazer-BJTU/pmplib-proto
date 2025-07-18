@@ -7,13 +7,13 @@ using namespace std;
 
 constexpr size_t num_tasks = 128;
 constexpr size_t test_per_task = 1024;
-constexpr auto method = putils::MemBlock::Method::BEST_FIT;
+constexpr auto method = putils::MemoryPool::FIRST_FIT;
 constexpr auto level = putils::RuntimeLog::Level::INFO;
 std::random_device seed_gen;
 
 int main() {
     using ull = unsigned long long;
-    putils::MemoryPool::set_global_memorypool(16, 2 * 1024 * 1024);
+    putils::MemoryPool::set_global_memorypool();
     auto& memory_pool = putils::MemoryPool::get_global_memorypool();
     putils::ThreadPool::set_global_threadpool();
     auto& thread_pool = putils::ThreadPool::get_global_threadpool();
@@ -36,8 +36,8 @@ int main() {
                 for (size_t k = 0; k < total_num; k++) {
                     arr[k] = udist_val(gen);
                 }
-                if (udist_release(gen) != 1) {
-                    handle->release();
+                if (udist_release(gen) <= 3) {
+                    putils::release(handle);
                 }
                 std::stringstream ss;
                 ss << "Task #" << i << ": attempt " << j << ": " << total_num << " unsigned long long(s).";
@@ -64,7 +64,7 @@ int main() {
     std::cout << "Min block size: " << view.min_block_size << std::endl;
     std::cout << "Max block size: " << view.max_block_size << std::endl;
     std::cout << "Bytes in use: " << view.bytes_in_use << std::endl;
-    std::cout << "Usage ratio: " << std::fixed << std::setprecision(2) << view.use_ratio * 100 << "\%" << std::endl;
-    std::cout << "Total memory usage: " << putils::MemoryPool::human(view.bytes_total) << std::endl;
+    std::cout << "Usage ratio: " << std::fixed << std::setprecision(2) << view.usage_ratio * 100 << "\%" << std::endl;
+    std::cout << "Total memory usage: " << putils::human(view.bytes_total) << std::endl;
     return 0;
 }
