@@ -53,9 +53,9 @@ MemBlock::~MemBlock() {
     }
 }
 
-MetaBlock::MetaBlock(size_t at_least): first(nullptr), last(nullptr), block_len_index(), list_lock() {
+MetaBlock::MetaBlock(size_t init_size): first(nullptr), last(nullptr), block_len_index(), list_lock() {
     try {
-        first = std::make_shared<MemBlock>(true, std::countr_zero(std::bit_ceil(at_least)), *this);
+        first = std::make_shared<MemBlock>(true, std::countr_zero(std::bit_ceil(init_size)), *this);
         total_bytes = first->len_bytes;
         block_len_index.insert(std::make_pair(first->len_bytes, first));
         last = first;
@@ -134,6 +134,7 @@ void MetaBlock::internal_compact(const BlockHandle& handle) noexcept {
 
 void MetaBlock::internal_extend(size_t at_least) {
     try {
+        at_least = (at_least + MemBlock::DEFAULT_ALIGNMENT - 1) / MemBlock::DEFAULT_ALIGNMENT * MemBlock::DEFAULT_ALIGNMENT;
         size_t extend_bytes = std::max<size_t>(at_least, total_bytes >> 1);
         last->nex_block = std::make_shared<MemBlock>(true, std::countr_zero(std::bit_ceil(extend_bytes)), *this);
         last->nex_block->pre_block = last;
@@ -153,8 +154,7 @@ MetaBlock::BlockHandle MetaBlock::try_assign(size_t target) {
 MetaBlock::BlockHandle MetaBlock::extend_and_assign(size_t target) {
     std::lock_guard<std::mutex> lock(list_lock);
     try {
-        size_t safe_target = (target + MemBlock::DEFAULT_ALIGNMENT - 1) / MemBlock::DEFAULT_ALIGNMENT * MemBlock::DEFAULT_ALIGNMENT;
-        internal_extend(safe_target);
+        internal_extend(target);
         return internal_assign(target);
     } PUTILS_CATCH_THROW_GENERAL
 }
@@ -246,30 +246,6 @@ MemoryPool::MemView MemoryPool::report() noexcept {
     view.avg_block_size = view.bytes_total / std::max<size_t>(view.num_blocks, 1);
     view.usage_ratio = view.bytes_in_use * 1.0f / std::max<size_t>(view.bytes_total, 1);
     return view;
-}
-
-std::string MemoryPool::memory_distribution() noexcept {
-    std::stringstream ss;
-    for (size_t i = 0; i < list.size(); i++) {
-        ss << "Block list #" << i + 1 << ": ";
-        auto& meta = list[i];
-        std::lock_guard<std::mutex> lock(meta->list_lock);
-        for (BlockHandle p = meta->first; p; p = p->nex_block) {
-            ss << "[";
-            if (p->header) {
-                ss << " (head block) ";
-            }
-            if (p->free) {
-                ss << " <free block> ";
-            }
-            ss << " size: " << human(p->len_bytes) << " ]";
-            if (p->nex_block) {
-                ss << "->";
-            }
-        }
-        ss << std::endl;
-    }
-    return ss.str();
 }
 
 }

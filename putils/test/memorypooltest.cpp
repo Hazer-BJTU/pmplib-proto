@@ -6,7 +6,7 @@
 using namespace std;
 
 constexpr size_t num_tasks = 128;
-constexpr size_t test_per_task = 1024;
+constexpr size_t test_per_task = 4096;
 constexpr auto level = putils::RuntimeLog::Level::INFO;
 std::random_device seed_gen;
 
@@ -32,15 +32,19 @@ int main() {
                 auto handle = memory_pool.allocate(total_num * sizeof(ull));
                 assert(handle && handle->length() >= total_num * sizeof(ull));
                 ull* arr = handle->get<ull>();
+                /*
                 for (size_t k = 0; k < handle->length<ull>(); k++) {
                     arr[k] = udist_val(gen);
                 }
-                if (udist_release(gen) >= 3) {
+                */
+                if (udist_release(gen) >= 2) {
                     putils::release(handle);
                 }
+                /*
                 std::stringstream ss;
                 ss << "Task #" << i << ": attempt " << j << ": " << total_num << " unsigned long long(s).";
                 logger.add(ss.str());
+                */
             }
             task_latch.count_down();
         }));

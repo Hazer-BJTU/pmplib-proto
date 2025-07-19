@@ -56,7 +56,6 @@ public:
     using WeakHandle = std::weak_ptr<MemBlock>;
     using BlockLenIndex = std::multimap<size_t, BlockHandle>;
 private:
-    static constexpr size_t DEFAULT_INIT_BLOCK_LOG_LEN = 22;
     BlockHandle first, last;
     BlockLenIndex block_len_index;
     std::mutex list_lock;
@@ -68,7 +67,7 @@ private:
     friend MemoryPool;
     friend void release(MemBlock::BlockHandle& handle) noexcept;
 public:
-    MetaBlock(size_t at_least = 1ull << DEFAULT_INIT_BLOCK_LOG_LEN);
+    MetaBlock(size_t init_size);
     ~MetaBlock();
     MetaBlock(const MetaBlock&) = delete;
     MetaBlock& operator = (const MetaBlock&) = delete;
@@ -114,7 +113,6 @@ public:
     static MemoryPool& get_global_memorypool() noexcept;
     BlockHandle allocate(size_t target);
     MemView report() noexcept;
-    std::string memory_distribution() noexcept;
 };
 
 }
