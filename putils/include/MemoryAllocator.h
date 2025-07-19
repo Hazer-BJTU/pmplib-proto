@@ -60,6 +60,7 @@ private:
     BlockHandle first, last;
     BlockLenIndex block_len_index;
     std::mutex list_lock;
+    size_t total_bytes = 0;
     BlockHandle internal_assign(size_t target);
     void internal_compact(const BlockHandle& handle) noexcept;
     void internal_extend(size_t at_least);

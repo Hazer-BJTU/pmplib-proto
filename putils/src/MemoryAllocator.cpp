@@ -44,7 +44,7 @@ MemBlock::~MemBlock() {
     if (valid && !free) {
         auto& logger = RuntimeLog::get_global_log();
         std::stringstream ss;
-        ss << "Block " << this << " with starting address [" << starting << "] is never released.";
+        ss << "Block " << this << " with starting address [" << static_cast<void*>(starting) << "] is never released.";
         logger.add(ss.str(), RuntimeLog::Level::WARN);
     }
     if (header && starting) {
@@ -56,8 +56,9 @@ MemBlock::~MemBlock() {
 MetaBlock::MetaBlock(size_t at_least): first(nullptr), last(nullptr), block_len_index(), list_lock() {
     try {
         first = std::make_shared<MemBlock>(true, std::countr_zero(std::bit_ceil(at_least)), *this);
+        total_bytes = first->len_bytes;
+        block_len_index.insert(std::make_pair(first->len_bytes, first));
         last = first;
-        block_len_index.insert(std::make_pair(last->len_bytes, last));
     } PUTILS_CATCH_THROW_GENERAL
 }
 
@@ -80,7 +81,7 @@ MetaBlock::BlockHandle MetaBlock::internal_assign(size_t target) {
         }
         BlockHandle handle = it->second;
         block_len_index.erase(it);
-        if (!handle || !handle->free || !handle->valid) {
+        if (!handle->free || !handle->valid) {
             continue;
         }
         if (handle->len_bytes == safe_target) {
@@ -133,8 +134,10 @@ void MetaBlock::internal_compact(const BlockHandle& handle) noexcept {
 
 void MetaBlock::internal_extend(size_t at_least) {
     try {
-        last->nex_block = std::make_shared<MemBlock>(true, std::countr_zero(std::bit_ceil(at_least)), *this);
+        size_t extend_bytes = std::max<size_t>(at_least, total_bytes >> 1);
+        last->nex_block = std::make_shared<MemBlock>(true, std::countr_zero(std::bit_ceil(extend_bytes)), *this);
         last->nex_block->pre_block = last;
+        total_bytes += last->nex_block->len_bytes;
         last = last->nex_block;
         block_len_index.insert(std::make_pair(last->len_bytes, last));
     } PUTILS_CATCH_THROW_GENERAL
@@ -228,9 +231,9 @@ MemoryPool::BlockHandle MemoryPool::allocate(size_t target) {
 
 MemoryPool::MemView MemoryPool::report() noexcept {
     MemView view = {0, 0, 0, std::numeric_limits<size_t>::max(), 0, 0};
-    for (auto& head: list) {
-        std::lock_guard<std::mutex> lock(head->list_lock);
-        for (BlockHandle p = head->first; p; p = p->nex_block) {
+    for (auto& meta: list) {
+        std::lock_guard<std::mutex> lock(meta->list_lock);
+        for (BlockHandle p = meta->first; p; p = p->nex_block) {
             view.bytes_total += p->len_bytes;
             view.num_blocks++;
             view.max_block_size = std::max<size_t>(view.max_block_size, p->len_bytes);
@@ -249,9 +252,9 @@ std::string MemoryPool::memory_distribution() noexcept {
     std::stringstream ss;
     for (size_t i = 0; i < list.size(); i++) {
         ss << "Block list #" << i + 1 << ": ";
-        auto& head = list[i];
-        std::lock_guard<std::mutex> lock(head->list_lock);
-        for (BlockHandle p = head->first; p; p = p->nex_block) {
+        auto& meta = list[i];
+        std::lock_guard<std::mutex> lock(meta->list_lock);
+        for (BlockHandle p = meta->first; p; p = p->nex_block) {
             ss << "[";
             if (p->header) {
                 ss << " (head block) ";
