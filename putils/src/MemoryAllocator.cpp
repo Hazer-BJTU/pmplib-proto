@@ -41,13 +41,19 @@ starting(nullptr), nex_block(nullptr), pre_block() {
 }
 
 MemBlock::~MemBlock() {
+    /* Writing a large amount of logs can severely impact performance,
+       since flushing the log buffer is executed in a single thread, which may cause write congestion. 
+       Therefore, the PUTILS_MEMORY_LEAK_CHECK macro is disabled by default. */
+    #ifdef PUTILS_MEMORY_LEAK_CHECK
     if (valid && !free) {
         auto& logger = RuntimeLog::get_global_log();
         std::stringstream ss;
         ss << "Block " << this << " with starting address [" << static_cast<void*>(starting) << "] is never released.";
         logger.add(ss.str(), RuntimeLog::Level::WARN);
     }
+    #endif
     if (header && starting) {
+        // Memory is managed by header blocks, and only the header block calls std::free to release the storage.
         std::free(starting);
         starting = nullptr;
     }
@@ -67,6 +73,8 @@ MetaBlock::~MetaBlock() {
     BlockHandle p = first, np;
     while(p) {
         np = p->nex_block;
+        /* Just break the smart pointer reference chain to ensure no long chain exists. 
+           Won't trigger destruction due to np's reference being held. */
         p->nex_block.reset();
         p = np; /* P = NP :-) */
     }
@@ -75,15 +83,24 @@ MetaBlock::~MetaBlock() {
 MetaBlock::BlockHandle MetaBlock::internal_assign(size_t target) {
     size_t safe_target = (target + MemBlock::DEFAULT_ALIGNMENT - 1) / MemBlock::DEFAULT_ALIGNMENT * MemBlock::DEFAULT_ALIGNMENT;
     while(true) {
+        /* Block index is merely advisory - doesn't guarantee indexed blocks meet allocation criteria,
+           but ensures nearly all qualifying blocks are included. */
         auto it = block_len_index.lower_bound(safe_target);
         if (it == block_len_index.end()) {
             return nullptr;
         }
         BlockHandle handle = it->second;
-        block_len_index.erase(it);
+        block_len_index.erase(it); //Remove index.
         if (!handle->free || !handle->valid) {
+            /* If the indexed block is occupied (typically from duplicate indexing), 
+               remove the index and retry acquisition.
+               If the indexed block is invalid (typically from mid-block deletion during compacting),
+               remove the index and retry acquisition. */
             continue;
         }
+        /* When indexed block's actual length mismatches key length (possibly from block splitting):
+           - If actual length cannot satisfy allocation: update index key and retry allocation.
+           - If actual length can satisfy allocation: allocate directly and remove the index. */
         if (handle->len_bytes == safe_target) {
             handle->free = false;
             return handle;
@@ -104,6 +121,10 @@ MetaBlock::BlockHandle MetaBlock::internal_assign(size_t target) {
                 last = new_handle;
             }
             return handle;
+        } else if (handle->len_bytes < safe_target) {
+            //Update index key.
+            block_len_index.insert(std::make_pair(handle->len_bytes, handle));
+            continue;
         }
     }
 }
@@ -112,10 +133,16 @@ void MetaBlock::internal_compact(const BlockHandle& handle) noexcept {
     if (!handle || !handle->free) {
         return;
     }
+    /* When freeing a block:
+       1. First search backward to find the earliest free block.
+       2. Then perform forward merging starting from that location. */
     BlockHandle curr = handle, pre, nex;
     while((pre = curr->pre_block.lock()) && pre->free && !curr->header) {
         curr = pre;
     }
+    /* Note: Merging must not cross header blocks (member header == true),
+       as these blocks are independently allocated rather than split from others.
+       Header blocks don't guarantee memory continuity between each other. */
     while(curr->nex_block && curr->nex_block->free && !curr->nex_block->header) {
         nex = curr->nex_block;
         curr->len_bytes += nex->len_bytes;
@@ -135,7 +162,13 @@ void MetaBlock::internal_compact(const BlockHandle& handle) noexcept {
 void MetaBlock::internal_extend(size_t at_least) {
     try {
         at_least = (at_least + MemBlock::DEFAULT_ALIGNMENT - 1) / MemBlock::DEFAULT_ALIGNMENT * MemBlock::DEFAULT_ALIGNMENT;
-        size_t extend_bytes = std::max<size_t>(at_least, total_bytes >> 1);
+        /* Memory growth strategy:
+           1. Exponential growth initially (for rapid expansion)
+           2. Linear growth when approaching MemoryPool::memory_extension_upper_bound
+           This prevents excessive redundant storage in later stages. */
+        size_t extend_bytes = std::max<size_t>(at_least, std::min<size_t>(total_bytes, MemoryPool::memory_extension_upper_bound));
+        /* Note: All contiguous memory blocks maintain lengths that are powers of two,
+           ensuring they're always multiples of DEFAULT_ALIGNMENT. */
         last->nex_block = std::make_shared<MemBlock>(true, std::countr_zero(std::bit_ceil(extend_bytes)), *this);
         last->nex_block->pre_block = last;
         total_bytes += last->nex_block->len_bytes;
@@ -171,10 +204,16 @@ void release(MetaBlock::BlockHandle& handle) noexcept {
     return;
 }
 
-
+/* This class allocates large, contiguous, aligned memory blocks that can be:
+   - Shared across threads (allocation/deallocation may occur in different threads)
+   - Used for special alignment requirements (e.g., SIMD instructions)
+   Note: Not suitable for small fragmented objects - use thread-local object pools instead. */
 std::random_device MemoryPool::seed_generator;
+/* Memory pool uses independent shards design with multiple small memory segments
+   to reduce thread contention during concurrent operations. */
 size_t MemoryPool::num_lists_reservation = std::thread::hardware_concurrency() << 1;
 size_t MemoryPool::initialization_block_size = 4194304;
+size_t MemoryPool::memory_extension_upper_bound = 16777216;
 std::atomic<bool> MemoryPool::initialized = false;
 std::mutex MemoryPool::setting_lock;
 
@@ -190,19 +229,20 @@ MemoryPool::MemoryPool() {
 
 MemoryPool::~MemoryPool() {}
 
-bool MemoryPool::set_global_memorypool(size_t num_lists_reservation, size_t initialization_block_size) noexcept {
+bool MemoryPool::set_global_memorypool(size_t num_lists_reservation, size_t initialization_block_size, size_t memory_extension_upper_bound) noexcept {
     auto& logger = RuntimeLog::get_global_log();
     std::lock_guard<std::mutex> lock(MemoryPool::setting_lock);
     if (MemoryPool::initialized.load(std::memory_order_acquire)) {
         logger.add("(MemoryPool): Settings cannot be modified after the instance has been initialized.");
         return false;
     }
-    if (num_lists_reservation == 0 || initialization_block_size == 0) {
+    if (num_lists_reservation == 0 || initialization_block_size == 0 || memory_extension_upper_bound == 0) {
         logger.add("(MemoryPool): All numeric arguments must be positive integers.");
         return false;
     }
     MemoryPool::num_lists_reservation = num_lists_reservation;
     MemoryPool::initialization_block_size = initialization_block_size;
+    MemoryPool::memory_extension_upper_bound = memory_extension_upper_bound;
     size_t total = MemoryPool::num_lists_reservation * std::max<size_t>(MemoryPool::initialization_block_size, 1ull << MemBlock::DEFAULT_LOG_LEN_LOWER_BOUND);
     std::stringstream ss;
     ss << "(MemoryPool): initialization storage size: " << human(total);
