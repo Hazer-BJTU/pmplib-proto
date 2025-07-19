@@ -62,6 +62,7 @@ MetaBlock::MetaBlock(size_t at_least): first(nullptr), last(nullptr), block_len_
 }
 
 MetaBlock::~MetaBlock() {
+    std::lock_guard<std::mutex> lock(list_lock);
     BlockHandle p = first, np;
     while(p) {
         np = p->nex_block;
@@ -97,6 +98,7 @@ MetaBlock::BlockHandle MetaBlock::internal_assign(size_t target) {
             block_len_index.insert(std::make_pair(new_handle->len_bytes, new_handle));
             handle->len_bytes = safe_target;
             handle->free = false;
+            handle->nex_block = new_handle;
             if (handle == last) {
                 last = new_handle;
             }
@@ -132,6 +134,7 @@ void MetaBlock::internal_compact(const BlockHandle& handle) noexcept {
 void MetaBlock::internal_extend(size_t at_least) {
     try {
         last->nex_block = std::make_shared<MemBlock>(true, std::countr_zero(std::bit_ceil(at_least)), *this);
+        last->nex_block->pre_block = last;
         last = last->nex_block;
         block_len_index.insert(std::make_pair(last->len_bytes, last));
     } PUTILS_CATCH_THROW_GENERAL
