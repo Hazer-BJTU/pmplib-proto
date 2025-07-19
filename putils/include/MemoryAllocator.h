@@ -1,37 +1,41 @@
 #pragma once
 
+#include <map>
 #include <bit>
 #include <limits>
 #include <atomic>
 #include <cstdlib>
-#include <shared_mutex>
 
 #include "RuntimeLog.h"
 
 namespace putils {
 
-class HeadBlock;
+std::string human(size_t bytes) noexcept;
+
+class MetaBlock;
 class MemoryPool;
 
 class MemBlock {
 public:
     using uPtr = uint8_t*;
-    using BlockHandle = MemBlock*;
-    static constexpr size_t DEFAULT_ALIGNMENT = 64;
-    static constexpr size_t DEFAULT_MIN_BLOCK_SIZE = 4096;
+    using BlockHandle = std::shared_ptr<MemBlock>;
+    using WeakHandle = std::weak_ptr<MemBlock>;
 private:
-    bool header;
-    std::atomic<bool> free;
+    static constexpr size_t DEFAULT_ALIGNMENT = 64;
+    static constexpr size_t DEFAULT_LOG_LEN_LOWER_BOUND = 12;
+    static constexpr size_t DEFAULT_LOG_LEN_UPPER_BOUND = 32;
+    bool header, free, valid;
     size_t len_bytes;
-    HeadBlock& head_block;
+    MetaBlock& meta_block;
     uPtr starting;
-    BlockHandle pre_block, nex_block;
-    MemBlock(bool header, size_t log_len, HeadBlock& head_block);
-    ~MemBlock();
-    friend HeadBlock;
+    BlockHandle nex_block;
+    WeakHandle pre_block;
+    friend MetaBlock;
     friend MemoryPool;
-    friend void release(MemBlock::BlockHandle&) noexcept;
+    friend void release(MemBlock::BlockHandle& handle) noexcept;
 public:
+    MemBlock(bool header, size_t log_len, MetaBlock& meta_block);
+    ~MemBlock();
     MemBlock(const MemBlock&) = delete;
     MemBlock& operator = (const MemBlock&) = delete;
     MemBlock(MemBlock&&) = delete;
@@ -46,42 +50,39 @@ public:
     }
 };
 
-void release(MemBlock::BlockHandle& handle) noexcept;
-std::string human(size_t bytes) noexcept;
-
-class HeadBlock {
+class MetaBlock {
 public:
-    using uPtr = uint8_t*;
-    using BlockHandle = MemBlock*;
-    enum class Method { FIRST_FIT, BEST_FIT };
+    using BlockHandle = std::shared_ptr<MemBlock>;
+    using WeakHandle = std::weak_ptr<MemBlock>;
+    using BlockLenIndex = std::multimap<size_t, BlockHandle>;
 private:
-    size_t num_blocks;
-    size_t total_len_bytes;
+    static constexpr size_t DEFAULT_INIT_BLOCK_LOG_LEN = 22;
     BlockHandle first, last;
+    BlockLenIndex block_len_index;
     std::mutex list_lock;
-    BlockHandle internal_assign(size_t target, Method method = Method::FIRST_FIT);
+    BlockHandle internal_assign(size_t target);
+    void internal_compact(const BlockHandle& handle) noexcept;
     void internal_extend(size_t at_least);
-    void internal_compact() noexcept;
+    friend MemBlock;
     friend MemoryPool;
+    friend void release(MemBlock::BlockHandle& handle) noexcept;
 public:
-    HeadBlock(size_t initial);
-    ~HeadBlock();
-    HeadBlock(const HeadBlock&) = delete;
-    HeadBlock& operator = (const HeadBlock&) = delete;
-    HeadBlock(HeadBlock&&) = delete;
-    HeadBlock& operator = (HeadBlock&&) = delete;
-    BlockHandle try_assign(size_t target, Method method = Method::FIRST_FIT);
-    BlockHandle extend_and_assign(size_t target, Method method = Method::FIRST_FIT);
-    BlockHandle compact_and_assign(size_t target, Method method = Method::FIRST_FIT);
-    BlockHandle assign_and_compact(size_t target, Method method = Method::FIRST_FIT);
+    MetaBlock(size_t at_least = 1ull << DEFAULT_INIT_BLOCK_LOG_LEN);
+    ~MetaBlock();
+    MetaBlock(const MetaBlock&) = delete;
+    MetaBlock& operator = (const MetaBlock&) = delete;
+    MetaBlock(MetaBlock&&) = delete;
+    MetaBlock& operator = (MetaBlock&&) = delete;
+    BlockHandle try_assign(size_t target);
+    BlockHandle extend_and_assign(size_t target);
 };
+
+void release(MemBlock::BlockHandle& handle) noexcept;
 
 class MemoryPool {
 public:
-    using BlockHandle = MemBlock*;
-    using HeadList = std::vector<std::unique_ptr<HeadBlock>>;
-    static constexpr HeadBlock::Method FIRST_FIT = HeadBlock::Method::FIRST_FIT;
-    static constexpr HeadBlock::Method BEST_FIT = HeadBlock::Method::BEST_FIT;
+    using BlockHandle = std::shared_ptr<MemBlock>;
+    using MetaList = std::vector<std::unique_ptr<MetaBlock>>;
     struct MemView {
         size_t bytes_total;
         size_t num_blocks;
@@ -97,7 +98,7 @@ private:
     static size_t initialization_block_size;
     static std::atomic<bool> initialized;
     static std::mutex setting_lock;
-    HeadList list;
+    MetaList list;
     MemoryPool();
     ~MemoryPool();
 public:
@@ -110,8 +111,9 @@ public:
         size_t initialization_block_size = MemoryPool::initialization_block_size
     ) noexcept;
     static MemoryPool& get_global_memorypool() noexcept;
-    BlockHandle allocate(size_t target, HeadBlock::Method method = HeadBlock::Method::FIRST_FIT);
+    BlockHandle allocate(size_t target);
     MemView report() noexcept;
+    std::string memory_distribution() noexcept;
 };
 
 }

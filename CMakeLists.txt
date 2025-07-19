@@ -7,7 +7,7 @@ include(CheckCXXCompilerFlag)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(COMPILER_OPTION_FLAGS "-g" "-rdynamic" "-O3")
+set(COMPILER_OPTION_FLAGS "-g" "-rdynamic")
 
 message("-- Option flags used: ${COMPILER_OPTION_FLAGS}")
 add_compile_options(${COMPILER_OPTION_FLAGS})

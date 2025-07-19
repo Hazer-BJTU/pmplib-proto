@@ -7,7 +7,6 @@ using namespace std;
 
 constexpr size_t num_tasks = 128;
 constexpr size_t test_per_task = 1024;
-constexpr auto method = putils::MemoryPool::FIRST_FIT;
 constexpr auto level = putils::RuntimeLog::Level::INFO;
 std::random_device seed_gen;
 
@@ -30,13 +29,13 @@ int main() {
             std::uniform_int_distribution<uint64_t> udist_val;
             for (size_t j = 0; j < test_per_task; j++) {
                 size_t total_num = udist_num(gen);
-                auto handle = memory_pool.allocate(total_num * sizeof(ull), method);
+                auto handle = memory_pool.allocate(total_num * sizeof(ull));
                 assert(handle && handle->length() >= total_num * sizeof(ull));
                 ull* arr = handle->get<ull>();
-                for (size_t k = 0; k < total_num; k++) {
+                for (size_t k = 0; k < handle->length<ull>(); k++) {
                     arr[k] = udist_val(gen);
                 }
-                if (udist_release(gen) <= 3) {
+                if (udist_release(gen) >= 3) {
                     putils::release(handle);
                 }
                 std::stringstream ss;
