@@ -48,7 +48,7 @@ MemBlock::~MemBlock() {
     if (valid && !free) {
         auto& logger = RuntimeLog::get_global_log();
         std::stringstream ss;
-        ss << "Block " << this << " with starting address [" << static_cast<void*>(starting) << "] is never released.";
+        ss << "(MemoryPool): Block " << this << " with starting address [" << static_cast<void*>(starting) << "] is never released.";
         logger.add(ss.str(), RuntimeLog::Level::WARN);
     }
     #endif

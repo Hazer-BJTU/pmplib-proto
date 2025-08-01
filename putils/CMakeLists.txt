@@ -28,6 +28,6 @@ foreach (test_source_file ${TESTS})
     target_link_libraries(${executable_name} putils)
     set_target_properties(
         ${executable_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY 
-        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/tests"
+        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/putils_tests"
     )
 endforeach()
