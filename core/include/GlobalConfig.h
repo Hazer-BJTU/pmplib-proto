@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string_view>
 #include <type_traits>
+#include <shared_mutex>
 
 #include "RuntimeLog.h"
 
@@ -44,7 +45,7 @@ public:
     using NodePtr = std::shared_ptr<ConfigNode>;
 public:
     ConfigNode() = default;
-    ~ConfigNode() = default;
+    virtual ~ConfigNode() = default;
 };
 
 class ConfigDomainNode: public ConfigNode {
@@ -55,7 +56,7 @@ private:
     friend GlobalConfig;
 public:
     ConfigDomainNode();
-    ~ConfigDomainNode();
+    ~ConfigDomainNode() override;
     ConfigDomainNode(const ConfigDomainNode&) = delete;
     ConfigDomainNode& operator = (const ConfigDomainNode&) = delete;
     ConfigDomainNode(ConfigDomainNode&&) = delete;
@@ -70,7 +71,7 @@ private:
     friend GlobalConfig;
 public:
     ConfigValueNode(const ConfigType& value);
-    ~ConfigValueNode();
+    ~ConfigValueNode() override;
     ConfigValueNode(const ConfigValueNode&) = delete;
     ConfigValueNode& operator = (const ConfigValueNode&) = delete;
     ConfigValueNode(ConfigValueNode&&) = delete;
@@ -87,8 +88,10 @@ private:
     static std::atomic<bool> initialized;
     static std::mutex setting_lock;
     NodePtr root;
+    mutable std::shared_mutex config_lock;
     GlobalConfig();
     ~GlobalConfig();
+    static std::string extract_domain(std::string& key) noexcept; 
 public:
     GlobalConfig(const GlobalConfig&) = delete;
     GlobalConfig& operator = (const GlobalConfig&) = delete;
@@ -99,6 +102,7 @@ public:
         size_t indent = GlobalConfig::indent
     ) noexcept;
     static GlobalConfig& get_global_config() noexcept;
+    bool insert(const std::string& key, const ConfigType& value) noexcept;
 };
 
 }

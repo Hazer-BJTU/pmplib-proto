@@ -77,12 +77,25 @@ size_t GlobalConfig::indent = 4;
 std::atomic<bool> GlobalConfig::initialized = false;
 std::mutex GlobalConfig::setting_lock;
 
-GlobalConfig::GlobalConfig() {
+GlobalConfig::GlobalConfig(): root(nullptr), config_lock() {
     std::lock_guard<std::mutex> lock(GlobalConfig::setting_lock);
     GlobalConfig::initialized.store(true, std::memory_order_release);
+    root = std::make_shared<ConfigDomainNode>();
 }
 
 GlobalConfig::~GlobalConfig() {}
+
+std::string GlobalConfig::extract_domain(std::string& key) noexcept {
+    size_t pos = key.find("/");
+    if (pos == std::string::npos) {
+        std::string result = key;
+        key.clear();
+        return result;
+    }
+    std::string result = key.substr(0, pos);
+    key = key.substr(pos + 1);
+    return result;
+}
 
 bool GlobalConfig::set_global_config(const std::string& config_filepath, size_t indent) noexcept {
     auto& logger = putils::RuntimeLog::get_global_log();
@@ -99,6 +112,47 @@ bool GlobalConfig::set_global_config(const std::string& config_filepath, size_t 
 GlobalConfig& GlobalConfig::get_global_config() noexcept {
     static GlobalConfig config_instance;
     return config_instance;
+}
+
+bool GlobalConfig::insert(const std::string& key, const ConfigType& value) noexcept {
+    auto& logger = putils::RuntimeLog::get_global_log();
+    if (!std::regex_match(key, GlobalConfig::valid_key)) {
+        logger.add("(Configuration): Invalid key: '" + key + "'!");
+        return false;
+    }
+    std::unique_lock<std::shared_mutex> lock(config_lock);
+    NodePtr p = root;
+    std::string remain_key = key, domain;
+    while(true) {
+        domain = extract_domain(remain_key);
+        auto dp = std::dynamic_pointer_cast<ConfigDomainNode>(p);
+        if (!dp) {
+            logger.add("(Configuration): Value type nodes cannot add subdomains.");
+            return false;
+        }
+        auto it = dp->children.find(domain);
+        if (remain_key == "") {
+            if (it == dp->children.end()) {
+                dp->children.insert(std::make_pair(domain, std::make_shared<ConfigValueNode>(value)));
+            } else {
+                auto vp = std::dynamic_pointer_cast<ConfigValueNode>(it->second);
+                if (!vp) {
+                    logger.add("(Configuration): Domain type nodes cannot set values.");
+                    return false;
+                }
+                vp->value = value;
+            }
+            break;
+        } else {
+            if (it == dp->children.end()) {
+                auto [new_it, inserted] = dp->children.insert(std::make_pair(domain, std::make_shared<ConfigDomainNode>()));
+                p = new_it->second;
+            } else {
+                p = it->second;
+            }
+        }
+    }
+    return true;
 }
 
 }

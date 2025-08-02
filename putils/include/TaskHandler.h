@@ -74,7 +74,7 @@ private:
     Lambda callback;
 public:
     explicit InstantTask(Lambda&& target): callback(std::forward<Lambda>(target)) {}
-    ~InstantTask() {}
+    ~InstantTask() override {}
     InstantTask(const InstantTask&) = default;
     InstantTask& operator = (const InstantTask&) = default;
     InstantTask(InstantTask&&) = default;

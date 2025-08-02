@@ -136,7 +136,9 @@ public:
     LockFreeQueue(LockFreeQueue&&) = delete;
     LockFreeQueue& operator = (LockFreeQueue&&) = delete;
     ~LockFreeQueue() {}
-    bool try_push(const DataPtr& data_ptr) noexcept {
+    template<typename Type>
+    requires std::same_as<std::decay_t<Type>, DataPtr>
+    bool try_push(Type&& data_ptr) noexcept {
         size_t current_tail, next_tail;
         do {
             current_tail = tail.load(std::memory_order_acquire);
@@ -161,7 +163,7 @@ public:
             it's unlikely for competing threads to be exactly one full cycle ahead of each other. */
         );
         //Complete node constructing.
-        ring_buffer[current_tail].data = data_ptr;
+        ring_buffer[current_tail].data = std::forward<Type>(data_ptr);
         ring_buffer[current_tail].ready.store(true, std::memory_order_release); //Ready for consume.
         qlen.fetch_add(1, std::memory_order_acq_rel);
         return true;
