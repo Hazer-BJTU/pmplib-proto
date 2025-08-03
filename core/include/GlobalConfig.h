@@ -29,7 +29,7 @@ public:
     ConfigType(Type&& value): data(std::forward<Type>(value)) {}
     std::string_view get_type() const noexcept;
     template<typename Type>
-    Type get_or_else(Type default_value) const noexcept {
+    Type get_or_else(const Type& default_value) const noexcept {
         try {
             return std::get<Type>(data);
         } catch(const std::bad_variant_access& e) {
@@ -92,6 +92,13 @@ private:
     GlobalConfig();
     ~GlobalConfig();
     static std::string extract_domain(std::string& key) noexcept; 
+    void recursive_write(
+        const std::string& domain_name, 
+        const NodePtr& p, 
+        std::ostream& stream,
+        const size_t indent, 
+        size_t layer = 0
+    ) const noexcept;
 public:
     GlobalConfig(const GlobalConfig&) = delete;
     GlobalConfig& operator = (const GlobalConfig&) = delete;
@@ -103,6 +110,43 @@ public:
     ) noexcept;
     static GlobalConfig& get_global_config() noexcept;
     bool insert(const std::string& key, const ConfigType& value) noexcept;
+    template<typename Type>
+    Type get_or_else(const std::string& key, const Type& default_value) const noexcept {
+        auto& logger = putils::RuntimeLog::get_global_log();
+        std::shared_lock<std::shared_mutex> slock(config_lock);
+        NodePtr p = root;
+        std::string remain_key = key, domain;
+        while(true) {
+            domain = extract_domain(remain_key);
+            auto dp = std::dynamic_pointer_cast<ConfigDomainNode>(p);
+            if (!dp) {
+                logger.add("(Configuration): Value type nodes don't have subdomains.");
+                return default_value;
+            }
+            auto it = dp->children.find(domain);
+            if (remain_key == "") {
+                if (it == dp->children.end()) {
+                    logger.add("(Configuration): Key '" + key + "' not found.");
+                    return default_value;
+                } else {
+                    auto vp = std::dynamic_pointer_cast<ConfigValueNode>(it->second);
+                    if (!vp) {
+                        logger.add("(Configuration): Domain type nodes don't have values.");
+                        return default_value;
+                    }
+                    return vp->value.get_or_else<Type>(default_value);
+                }
+            } else {
+                if (it == dp->children.end()) {
+                    logger.add("(Configuration): Key '" + key + "' not found.");
+                    return default_value;
+                } else {
+                    p = it->second;
+                }
+            }
+        }
+    }
+    void export_all() const noexcept;
 };
 
 }

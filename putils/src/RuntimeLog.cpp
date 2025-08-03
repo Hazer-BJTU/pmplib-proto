@@ -135,7 +135,7 @@ void RuntimeLog::flush() {
         log_level = RuntimeLog::log_level;
     }
     std::ofstream file_out(log_filepath, std::ios::out | std::ios::app);
-    auto auard = ScopeGuard([this, &file_out]() {
+    auto guard = ScopeGuard([this, &file_out]() {
         file_out.close();
         flushing.store(false, std::memory_order_release);
     });

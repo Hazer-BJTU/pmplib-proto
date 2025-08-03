@@ -57,6 +57,8 @@ std::istream& operator >> (std::istream& stream, ConfigType& config) noexcept {
 std::ostream& operator << (std::ostream& stream, const ConfigType& config) noexcept {
     if (config.get_type() == "bool") {
         stream << (config.get_or_else<bool>(false) ? "true" : "false");
+    } else if (config.get_type() == "string") {
+        stream << std::quoted(config.get_or_else<std::string>("")); 
     } else {
         std::visit([&stream](auto&& arg) { stream << arg; }, config.data);
     }
@@ -120,7 +122,7 @@ bool GlobalConfig::insert(const std::string& key, const ConfigType& value) noexc
         logger.add("(Configuration): Invalid key: '" + key + "'!");
         return false;
     }
-    std::unique_lock<std::shared_mutex> lock(config_lock);
+    std::unique_lock<std::shared_mutex> xlock(config_lock);
     NodePtr p = root;
     std::string remain_key = key, domain;
     while(true) {
@@ -142,7 +144,7 @@ bool GlobalConfig::insert(const std::string& key, const ConfigType& value) noexc
                 }
                 vp->value = value;
             }
-            break;
+            return true;
         } else {
             if (it == dp->children.end()) {
                 auto [new_it, inserted] = dp->children.insert(std::make_pair(domain, std::make_shared<ConfigDomainNode>()));
@@ -152,7 +154,64 @@ bool GlobalConfig::insert(const std::string& key, const ConfigType& value) noexc
             }
         }
     }
-    return true;
+}
+
+void GlobalConfig::recursive_write(
+    const std::string& domain_name, 
+    const NodePtr& p, 
+    std::ostream& stream,
+    const size_t indent, 
+    size_t layer
+) const noexcept {
+    auto dp = std::dynamic_pointer_cast<ConfigDomainNode>(p);
+    if (dp) {
+        for (size_t i = 0; i < layer * indent; i++) {
+            stream << " ";
+        }
+        stream << std::quoted(domain_name) << ": {" << std::endl;
+        for (auto it = dp->children.begin(); it != dp->children.end(); it++) {
+            recursive_write(it->first, it->second, stream, indent, layer + 1);
+            if (std::next(it) != dp->children.end()) {
+                stream << ",";
+            }
+            stream << std::endl;
+        }
+        for (size_t i = 0; i < layer * indent; i++) {
+            stream << " ";
+        }
+        stream << "}";
+        return;
+    }
+    auto vp = std::dynamic_pointer_cast<ConfigValueNode>(p);
+    if (vp) {
+        for (size_t i = 0; i < layer * indent; i++) {
+            stream << " ";
+        }
+        stream << std::quoted(domain_name) << ": " << vp->value;
+        return;
+    }
+    return;
+}
+
+void GlobalConfig::export_all() const noexcept {
+    auto& logger = putils::RuntimeLog::get_global_log();
+    std::shared_lock<std::shared_mutex> slock(config_lock);
+    std::string filepath;
+    size_t indent;
+    {
+        std::lock_guard<std::mutex> lock(setting_lock);
+        filepath = GlobalConfig::config_filepath;
+        indent = GlobalConfig::indent;
+    }
+    std::ofstream file_out(filepath, std::ios::out);
+    if (!file_out.is_open()) {
+        logger.add("(Configuration): Failed to open configuration file: " + filepath + "!", putils::RuntimeLog::Level::WARN);
+        return;
+    }
+    file_out << "{" << std::endl;
+    recursive_write("Configurations", root, file_out, indent, 1);
+    file_out << std::endl << "}";
+    return;
 }
 
 }
