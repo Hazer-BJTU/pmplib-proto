@@ -1,6 +1,7 @@
 #pragma once
 
 #include <regex>
+#include <cctype>
 #include <variant>
 #include <iostream>
 #include <string_view>
@@ -16,7 +17,7 @@ class GlobalConfig;
 class ConfigType {
 private:
     std::variant<int64_t, double, bool, std::string> data;
-    void convert(const std::string& str) noexcept;
+    ConfigType& convert(const std::string& str) noexcept;
     friend GlobalConfig;
 public:
     ConfigType();
@@ -71,6 +72,7 @@ private:
     friend GlobalConfig;
 public:
     ConfigValueNode(const ConfigType& value);
+    ConfigValueNode(ConfigType&& value);
     ~ConfigValueNode() override;
     ConfigValueNode(const ConfigValueNode&) = delete;
     ConfigValueNode& operator = (const ConfigValueNode&) = delete;
@@ -83,6 +85,8 @@ public:
     using NodePtr = std::shared_ptr<ConfigNode>;
 private:
     static const std::regex valid_key;
+    static const std::regex comments;
+    static const std::regex valid_doc_char;
     static std::string config_filepath;
     static size_t indent;
     static std::atomic<bool> initialized;
@@ -91,7 +95,7 @@ private:
     mutable std::shared_mutex config_lock;
     GlobalConfig();
     ~GlobalConfig();
-    static std::string extract_domain(std::string& key) noexcept; 
+    static std::string extract_domain(std::string& key) noexcept;
     void recursive_write(
         const std::string& domain_name, 
         const NodePtr& p, 
@@ -99,6 +103,8 @@ private:
         const size_t indent, 
         size_t layer = 0
     ) const noexcept;
+    static std::string_view extract_parse_field(std::string_view config_str, std::string& domain, size_t& p) noexcept;
+    void parse_and_set(std::string config_str);
 public:
     GlobalConfig(const GlobalConfig&) = delete;
     GlobalConfig& operator = (const GlobalConfig&) = delete;
