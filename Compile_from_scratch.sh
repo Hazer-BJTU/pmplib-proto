@@ -1,6 +1,5 @@
 rm -rf bin/*
 rm -rf build/*
 rm -rf lib/*
-cd build
-cmake ..
-make -j$(nproc)
+cmake -B build
+cmake --build build -j$(nproc)

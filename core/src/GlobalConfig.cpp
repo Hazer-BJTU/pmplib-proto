@@ -2,7 +2,7 @@
 
 namespace mpengine {
 
-ConfigType::ConfigType(): data(false) {}
+ConfigType::ConfigType(): data(std::monostate {}) {}
 
 ConfigType::~ConfigType() {}
 
@@ -21,6 +21,10 @@ std::string_view ConfigType::get_type() const noexcept {
 
 ConfigType& ConfigType::convert(const std::string& str) noexcept {
     size_t pos;
+    if (!str.empty() && str.front() == '\"' && str.back() == '\"') {
+        data = str.substr(1, str.length() - 2);
+        return *this;
+    }
     try {
         int64_t value = std::stoll(str, &pos);
         if (pos == str.length()) {
@@ -80,24 +84,18 @@ const std::regex GlobalConfig::comments("<.*?>");
 const std::regex GlobalConfig::valid_doc_char("[a-zA-Z0-9_.\":{,}]+");
 std::string GlobalConfig::config_filepath("configurations.conf");
 size_t GlobalConfig::indent = 4;
-std::atomic<bool> GlobalConfig::initialized = false;
 std::mutex GlobalConfig::setting_lock;
 
 GlobalConfig::GlobalConfig(): root(nullptr), config_lock() {
-    std::lock_guard<std::mutex> lock(GlobalConfig::setting_lock);
-    GlobalConfig::initialized.store(true, std::memory_order_release);
-    auto& logger = putils::RuntimeLog::get_global_log();
-    std::ifstream file_in(GlobalConfig::config_filepath, std::ios::in);
-    if (!file_in.is_open()) {
-        logger.add("(Configuration): Failed to open configuration file: " + GlobalConfig::config_filepath + "!", putils::RuntimeLog::Level::WARN);
-        root = std::make_shared<ConfigDomainNode>();
-    } else {
-        std::ostringstream oss;
-        oss << file_in.rdbuf();
+    #ifdef MPENGINE_CONFIG_LOAD_DEFAULT
         try {
-            parse_and_set(oss.str());
-        } PUTILS_CATCH_THROW_GENERAL
-    }
+            parse_and_set(MPENGINE_DEFAULT_CONFIGURATIONS_STRING);
+        } catch(...) {
+            root = std::make_shared<ConfigDomainNode>();
+        }
+    #else
+        root = std::make_shared<ConfigDomainNode>();
+    #endif
 }
 
 GlobalConfig::~GlobalConfig() {}
@@ -228,6 +226,7 @@ void GlobalConfig::export_all() const noexcept {
         return;
     }
     recursive_write("", root, file_out, indent, 0);
+    file_out.close();
     return;
 }
 
@@ -253,7 +252,7 @@ void GlobalConfig::parse_and_set(std::string config_str) {
     auto new_end = std::remove_if(config_str.begin(), config_str.end(), [] (char c) { return std::isspace(c); });
     config_str.erase(new_end, config_str.end());
     //Remove comments.
-    std::regex_replace(config_str, GlobalConfig::comments, "");
+    config_str = std::regex_replace(config_str, GlobalConfig::comments, "");
     if (config_str.empty() || !std::regex_match(config_str, GlobalConfig::valid_doc_char)) {
         throw PUTILS_GENERAL_EXCEPTION("(Configurations): Wrong configuration file format - invalid characters or comments.", "invalid doc format");
     }
@@ -293,9 +292,6 @@ void GlobalConfig::parse_and_set(std::string config_str) {
                     if (!dnode) {
                         throw PUTILS_GENERAL_EXCEPTION("(Configurations): Value type nodes cannot add subdomains.", "type error");
                     }
-                    if (new_domain.front() == '\"' && new_domain.back() == '\"') {
-                        new_domain = new_domain.substr(1, new_domain.length() - 2);
-                    }
                     dnode->children.insert(std::make_pair(domain, std::make_shared<ConfigValueNode>(std::move(ConfigType().convert(new_domain)))));
                 }
                 if (new_state == "END_DOMAIN") {
@@ -315,6 +311,29 @@ void GlobalConfig::parse_and_set(std::string config_str) {
         }
     }
     return;
+}
+
+void GlobalConfig::read_from(std::string filepath) noexcept {
+    auto& logger = putils::RuntimeLog::get_global_log();
+    if (filepath.empty()) {
+        std::lock_guard<std::mutex> lock(GlobalConfig::setting_lock);
+        filepath = GlobalConfig::config_filepath;
+    }
+    std::ifstream file_in(filepath, std::ios::in);
+    if (!file_in.is_open()) {
+        logger.add("(Configuration): Failed to open configuration file: " + filepath + "!", putils::RuntimeLog::Level::WARN);
+        return;
+    }
+    std::unique_lock<std::shared_mutex> xlock(config_lock);
+    std::ostringstream oss;
+    oss << file_in.rdbuf();
+    try {
+        parse_and_set(oss.str());
+    } PUTILS_CATCH_LOG_GENERAL_MSG(
+        "(Configurations): Parse failed! Configurations may be incomplete!",
+        putils::RuntimeLog::Level::WARN
+    )
+    file_in.close();
 }
 
 }

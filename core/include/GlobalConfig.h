@@ -10,13 +10,17 @@
 
 #include "RuntimeLog.h"
 
+#ifdef MPENGINE_CONFIG_LOAD_DEFAULT
+#include "DefaultConfigs.hpp"
+#endif 
+
 namespace mpengine {
 
 class GlobalConfig;
 
 class ConfigType {
 private:
-    std::variant<int64_t, double, bool, std::string> data;
+    std::variant<std::monostate, int64_t, double, bool, std::string> data;
     ConfigType& convert(const std::string& str) noexcept;
     friend GlobalConfig;
 public:
@@ -89,7 +93,6 @@ private:
     static const std::regex valid_doc_char;
     static std::string config_filepath;
     static size_t indent;
-    static std::atomic<bool> initialized;
     static std::mutex setting_lock;
     NodePtr root;
     mutable std::shared_mutex config_lock;
@@ -153,6 +156,7 @@ public:
         }
     }
     void export_all() const noexcept;
+    void read_from(std::string filepath = "") noexcept;
 };
 
 }
