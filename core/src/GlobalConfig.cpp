@@ -79,9 +79,9 @@ ConfigValueNode::ConfigValueNode(ConfigType&& value): value(std::forward<ConfigT
 
 ConfigValueNode::~ConfigValueNode() {}
 
-const std::regex GlobalConfig::valid_key("[a-zA-Z0-9_.]+(/[a-zA-Z0-9_.]+)*");
+const std::regex GlobalConfig::valid_key("[a-zA-Z0-9-_.]+(/[a-zA-Z0-9-_.]+)*");
 const std::regex GlobalConfig::comments("<.*?>");
-const std::regex GlobalConfig::valid_doc_char("[a-zA-Z0-9_.\":{,}]+");
+const std::regex GlobalConfig::valid_doc_char("[a-zA-Z0-9-_.\":{,}]+");
 std::string GlobalConfig::config_filepath("configurations.conf");
 size_t GlobalConfig::indent = 4;
 std::mutex GlobalConfig::setting_lock;

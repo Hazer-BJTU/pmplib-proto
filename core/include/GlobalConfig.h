@@ -84,6 +84,51 @@ public:
     ConfigValueNode& operator = (ConfigValueNode&&) = delete;
 };
 
+/**
+ * @class GlobalConfig
+ * @brief Thread-safe singleton configuration tree for importing/reading program configurations.
+ * 
+ * This class provides a thread-safe way to manage and access configuration settings
+ * throughout the application. It supports:
+ * - Loading configurations from files (with JSON-like syntax)
+ * - Hierarchical organization of settings
+ * - Type-safe value retrieval with fallback defaults
+ * - Configuration export functionality
+ * 
+ * The configuration file format is JSON-like with support for comments. Example:
+ * @code
+ * {
+ *     "Configurations": {
+ *         <Comments can be placed like this.>
+ *         <All other settings must be contained in the outer domain "Configurations".>
+ *         "basic_types": { <It supports basic types.> "integer": 100, "double": 1e-4, "bool": true
+ *              <Both "true / false" and "True / False" are OK.>, "string": "100101" <Strings must be enclosed in quotation marks.>,
+ *              "string": "version_1.0" <Strings cannot contain spaces or comments; use underscores instead.>,
+ *              "inner_domain" <Supports nested dictionaries> : {
+ *                  <Nothing here...>
+ *              }
+ *         },
+ *         "list": {"0": 0, "1": 1, "2": 2, "3": 3} <The list uses "0", "1", "2", "3" as keys.>,
+ *         <Nested keys are connected using "/".>
+ *         "first": {"second": {"third": { "value": 0 <key = "first/second/third/value"> }}}
+ *     }
+ * }
+ * @endcode
+ * 
+ * @note Key names should avoid comment symbols and spaces (use underscores instead).
+ * All configurations must be wrapped in a "Configurations" domain.
+ * 
+ * Thread Safety:
+ * - Singleton access is thread-safe
+ * - Configuration reads are concurrent (shared lock)
+ * - Configuration writes are exclusive (unique lock)
+ * 
+ * @warning This class is non-copyable and non-movable (singleton pattern).
+ * 
+ * @author Hazer
+ * @date 2025/8/4
+ */
+
 class GlobalConfig {
 public:
     using NodePtr = std::shared_ptr<ConfigNode>;
