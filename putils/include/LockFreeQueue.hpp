@@ -15,12 +15,12 @@ struct DefaultLFQNode {
     using DataPtr = std::shared_ptr<DataType>;
     DataPtr data;
     std::atomic<bool> ready;
-    explicit DefaultLFQNode(const DataPtr& ptr = nullptr): data(ptr), ready(false) {}
+    DefaultLFQNode(const DataPtr& ptr = nullptr): data(ptr), ready(false) {}
     DefaultLFQNode(const DefaultLFQNode& node) = delete;
     DefaultLFQNode& operator = (const DefaultLFQNode& node) = delete;
     DefaultLFQNode(DefaultLFQNode&&) = delete;
     DefaultLFQNode& operator = (DefaultLFQNode&&) = delete;
-    ~DefaultLFQNode() {}
+    virtual ~DefaultLFQNode() {}
 };
 
 template <typename NodeType, typename DataType>
@@ -121,7 +121,7 @@ private:
     alignas(CACHE_LINE_PADDING) std::atomic<size_t> qlen;
     size_t capacity, mask;
 public:
-    explicit LockFreeQueue(size_t length = DEFAULT_BUFFER_LENGTH): 
+    LockFreeQueue(size_t length = DEFAULT_BUFFER_LENGTH): 
     ring_buffer(length), element_allocator(), head(0), tail(0), qlen(0), capacity(length) {
         if (capacity < 4) {
             throw PUTILS_GENERAL_EXCEPTION("Too short length for a queue!", "invalid argument");

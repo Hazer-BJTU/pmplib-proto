@@ -10,4 +10,5 @@ inline constexpr const char* MPENGINE_DEFAULT_CONFIGURATIONS_STRING =
     "        <Instead, import configurations via void read_from(file_path).>"
     "    }"
     "}";
+    
 }
