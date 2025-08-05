@@ -7,7 +7,14 @@ include(CheckCXXCompilerFlag)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(COMPILER_OPTION_FLAGS "-g" "-rdynamic" "-O3")
+option(GENERATE_TEST_TARGETS OFF)
+option(BUILD_RELEASE OFF)
+
+if(BUILD_RELEASE)
+    set(COMPILER_OPTION_FLAGS "-O3")
+else()
+    set(COMPILER_OPTION_FLAGS "-g" "-rdynamic" "-O3")
+endif()
 
 message(STATUS "Global option flags used: ${COMPILER_OPTION_FLAGS}")
 add_compile_options(${COMPILER_OPTION_FLAGS})

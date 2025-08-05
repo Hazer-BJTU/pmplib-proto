@@ -8,6 +8,7 @@ set_target_properties(putils PROPERTIES PREFIX "${PROJECT_NAME}_")
 target_compile_definitions(putils PRIVATE PUTILS_GENERAL_EXCEPTION_KNOWN_ONLY)
 target_link_options(putils PRIVATE ${COMPILER_OPTION_FLAGS})
 
+message(STATUS "Start checking macros for putils.")
 set(PUTILS_MACROS PUTILS_GENERAL_EXCEPTION_KNOWN_ONLY PUTILS_MEMORY_LEAK_CHECK)
 foreach (macro ${PUTILS_MACROS})
     get_target_property(DEFS putils COMPILE_DEFINITIONS)
@@ -19,15 +20,19 @@ foreach (macro ${PUTILS_MACROS})
     endif()
 endforeach()
 
-message(STATUS "putils tests option flags used: ${COMPILER_OPTION_FLAGS}")
-
-foreach (test_source_file ${TESTS})
-    get_filename_component(executable_name ${test_source_file} NAME_WE)
-    add_executable(${executable_name} ${test_source_file})
-    target_link_options(${executable_name} PRIVATE ${COMPILER_OPTION_FLAGS})
-    target_link_libraries(${executable_name} putils)
-    set_target_properties(
-        ${executable_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY 
-        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/putils_tests"
-    )
-endforeach()
+if(GENERATE_TEST_TARGETS)
+    message(STATUS "Start generating test targets for putils.")
+    message(STATUS "putils tests option flags used: ${COMPILER_OPTION_FLAGS}")
+    foreach (test_source_file ${TESTS})
+        get_filename_component(executable_name ${test_source_file} NAME_WE)
+        add_executable(${executable_name} ${test_source_file})
+        target_link_options(${executable_name} PRIVATE ${COMPILER_OPTION_FLAGS})
+        target_link_libraries(${executable_name} putils)
+        set_target_properties(
+            ${executable_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY 
+            "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/putils_tests"
+        )
+    endforeach()
+else()
+    message(STATUS "Skip generating test targets for putils.")
+endif()

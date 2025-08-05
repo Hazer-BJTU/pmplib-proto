@@ -9,6 +9,7 @@ target_compile_definitions(core PRIVATE MPENGINE_CONFIG_LOAD_DEFAULT)
 target_link_libraries(core PUBLIC putils) 
 target_link_options(core PRIVATE ${COMPILER_OPTION_FLAGS})
 
+message(STATUS "Start checking macros for core.")
 set(MPENGINE_MACROS MPENGINE_CONFIG_LOAD_DEFAULT)
 foreach (macro ${MPENGINE_MACROS})
     get_target_property(DEFS core COMPILE_DEFINITIONS)
@@ -20,15 +21,19 @@ foreach (macro ${MPENGINE_MACROS})
     endif()
 endforeach()
 
-message(STATUS "core tests option flags used: ${COMPILER_OPTION_FLAGS}")
-
-foreach (test_source_file ${TESTS})
-    get_filename_component(executable_name ${test_source_file} NAME_WE)
-    add_executable(${executable_name} ${test_source_file})
-    target_link_options(${executable_name} PRIVATE ${COMPILER_OPTION_FLAGS})
-    target_link_libraries(${executable_name} core)
-    set_target_properties(
-        ${executable_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY 
-        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/core_tests"
-    )
-endforeach()
+if(GENERATE_TEST_TARGETS)
+    message(STATUS "Start generating test targets for core.")
+    message(STATUS "core tests option flags used: ${COMPILER_OPTION_FLAGS}")
+    foreach (test_source_file ${TESTS})
+        get_filename_component(executable_name ${test_source_file} NAME_WE)
+        add_executable(${executable_name} ${test_source_file})
+        target_link_options(${executable_name} PRIVATE ${COMPILER_OPTION_FLAGS})
+        target_link_libraries(${executable_name} core)
+        set_target_properties(
+            ${executable_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY 
+            "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/core_tests"
+        )
+    endforeach()
+else()
+    message(STATUS "Skip generating test targets for core.")
+endif()
