@@ -52,6 +52,9 @@ private:
         try {
             it->second.action();
         } PUTILS_CATCH_THROW_GENERAL
+        if (it->second.target == nullptr) {
+            throw PUTILS_GENERAL_EXCEPTION("Error state encountered, parse terminated.", "FSM error");
+        }
         return it->second.target;
     }
     template<typename Callable>
@@ -94,6 +97,7 @@ public:
     FiniteStateMachine(FiniteStateMachine&&) = default;
     FiniteStateMachine& operator = (FiniteStateMachine&&) = default;
 protected:
+    Event current_event;
     template<typename... Args>
     bool add_node(const NodeIndex& index, Args&&... args) noexcept {
         if (nodes.find(index) != nodes.end()) {
@@ -132,6 +136,23 @@ protected:
         }
         return flag;
     }
+    template<typename... Args>
+    bool add_error_transition(const NodeIndex& source, Args&&... args) noexcept {
+        auto it_source = nodes.find(source);
+        if (it_source == nodes.end()) {
+            return false;
+        }
+        it_source->second->add_transition(nullptr, std::forward<Args>(args)...);
+        return true;
+    }
+    template<typename... Args>
+    bool add_error_transitions(const NodeIndex& source, const EventList& events, Args&&... args) noexcept {
+        bool flag = true;
+        for (auto it = events.begin(); it != events.end(); it++) {
+            flag &= add_error_transition(source, *it, std::forward<Args>(args)...);
+        }
+        return flag;
+    }
 public:
     void reset() {
         auto it = nodes.find(starting_index);
@@ -145,6 +166,7 @@ public:
             throw PUTILS_GENERAL_EXCEPTION("Initial state is not set.", "FSM error");
         }
         try {
+            current_event = event;
             p = p->step(event);
             return p->ending;
         } PUTILS_CATCH_THROW_GENERAL
@@ -155,6 +177,7 @@ public:
         }
         try {
             for (auto it = events.begin(); it != events.end(); it++) {
+                current_event = *it;
                 p = p->step(*it);
             }
             return p->ending;
