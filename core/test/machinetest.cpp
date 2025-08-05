@@ -1,12 +1,24 @@
 #include "FiniteStateMachine.hpp"
 
+class MyAutomaton: public mpengine::Automaton {
+public:
+    double num;
+    size_t exp;
+    bool sign_num, sign_exp;
+    //Define what you need...
+    MyAutomaton(): num(.0), exp(0), sign_num(1), sign_exp(1) {
+        add_node("S0");
+        add_node("S1");
+        add_node("S2");
+        add_transition("S0", "S1", '+');
+        add_transition("S0", "S1", '-', [this] { sign_num = 0; } /* action */ );
+        //TO DO ...
+        set_starting("S0");
+    }
+    ~MyAutomaton() override {};
+};
+
 int main() {
-    mpengine::Automaton atm;
-    atm.add_node("A");
-    atm.add_node("B");
-    atm.add_node("C", true);
-    atm.add_transitions("A", "B", "abc");
-    atm.set_starting("A");
-    atm.step('x');
+
     return 0;
 }

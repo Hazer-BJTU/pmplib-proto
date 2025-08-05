@@ -41,6 +41,7 @@ public:
     FSMNode& operator = (const FSMNode&) = default;
     FSMNode(FSMNode&&) = default;
     FSMNode& operator = (FSMNode&&) = default;
+private:
     NodePtr step(const Event& event) {
         auto it = transition_chart.find(event);
         if (it == transition_chart.end()) {
@@ -92,6 +93,7 @@ public:
     FiniteStateMachine& operator = (const FiniteStateMachine&) = default;
     FiniteStateMachine(FiniteStateMachine&&) = default;
     FiniteStateMachine& operator = (FiniteStateMachine&&) = default;
+protected:
     template<typename... Args>
     bool add_node(const NodeIndex& index, Args&&... args) noexcept {
         if (nodes.find(index) != nodes.end()) {
@@ -113,9 +115,6 @@ public:
         p = it->second.get();
         return true;
     }
-    void reset() noexcept {
-        p = nodes.find(starting_index)->second.get();
-    }
     template<typename... Args>
     bool add_transition(const NodeIndex& source, const NodeIndex& target, Args&&... args) noexcept {
         auto it_source = nodes.find(source), it_target = nodes.find(target);
@@ -133,19 +132,45 @@ public:
         }
         return flag;
     }
+public:
+    void reset() {
+        auto it = nodes.find(starting_index);
+        if (it == nodes.end()) {
+            throw PUTILS_GENERAL_EXCEPTION("Starting state is not set.", "FSM error");
+        }
+        p = it->second.get();
+    }
     bool step(const Event& event) {
+        if (!p) {
+            throw PUTILS_GENERAL_EXCEPTION("Initial state is not set.", "FSM error");
+        }
         try {
             p = p->step(event);
             return p->ending;
         } PUTILS_CATCH_THROW_GENERAL
     }
     bool steps(const EventList& events) {
+        if (!p) {
+            throw PUTILS_GENERAL_EXCEPTION("Initial state is not set.", "FSM error");
+        }
         try {
             for (auto it = events.begin(); it != events.end(); it++) {
                 p = p->step(*it);
             }
             return p->ending;
         } PUTILS_CATCH_THROW_GENERAL
+    }
+    const NodeIndex& get_current_state() const {
+        if (!p) {
+            throw PUTILS_GENERAL_EXCEPTION("Initial state is not set.", "FSM error");
+        }
+        return p->index;
+    }
+    bool accepted() const {
+        if (!p) {
+            throw PUTILS_GENERAL_EXCEPTION("Initial state is not set.", "FSM error");
+        }
+        return p->ending;
     }
 };
 
