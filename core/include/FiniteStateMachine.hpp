@@ -4,6 +4,7 @@
 #include <deque>
 #include <memory>
 #include <functional>
+#include <unordered_map>
 
 #include "RuntimeLog.h"
 
@@ -13,6 +14,10 @@ template<typename, typename, typename, typename, typename>
 class FiniteStateMachine;
 
 template<typename NodeIndex, typename Event>
+requires requires(std::ostream& stream, const NodeIndex& index, const Event& event) {
+    { stream << index } -> std::same_as<std::ostream&>;
+    { stream << event } -> std::same_as<std::ostream&>;
+}
 class FSMNode {
 public:
     using NodePtr = FSMNode*;
@@ -23,7 +28,7 @@ public:
 private:
     bool ending;
     NodeIndex index;
-    std::map<Event, edge> transition_chart;
+    std::unordered_map<Event, edge> transition_chart;
     template<
         typename FSMNodeIndexType, 
         typename FSMEventType, 
@@ -73,13 +78,23 @@ private:
     }
 };
 
+template<typename NodeIndex, typename Event, typename Node, typename NodeAllocator, typename EventList>
+concept ValidFSMTamplateParams = requires {
+    requires std::equality_comparable<NodeIndex>;
+    requires std::hash<NodeIndex>;
+    requires std::equality_comparable<Event>;
+    requires std::hash<Event>;
+    requires std::is_same_v<typename EventList::value_type, Event>;
+    requires std::is_base_of<FSMNode<NodeIndex, Event>, Node>;
+};
+
 template<
     typename NodeIndex, 
     typename Event, 
     typename Node = FSMNode<NodeIndex, Event>,
     typename NodeAllocator = std::allocator<Node>,
-    typename EventList = std::deque<Event>
->
+    typename EventList = std::basic_string<Event>
+> requires ValidFSMTamplateParams<NodeIndex, Event, Node, NodeAllocator, EventList>
 class FiniteStateMachine {
 public:
     using NodeSPtr = std::shared_ptr<Node>;
@@ -87,7 +102,7 @@ public:
 private:
     NodePtr p;
     NodeIndex starting_index;
-    std::map<NodeIndex, NodeSPtr> nodes;
+    std::unordered_map<NodeIndex, NodeSPtr> nodes;
     NodeAllocator node_allocator;
 public:
     FiniteStateMachine(): p(nullptr), starting_index(), nodes(), node_allocator() {};

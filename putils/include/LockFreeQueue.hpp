@@ -10,7 +10,7 @@
 
 namespace putils {
 
-template<class DataType>
+template<typename DataType>
 struct DefaultLFQNode {
     using DataPtr = std::shared_ptr<DataType>;
     DataPtr data;
@@ -104,10 +104,10 @@ concept ValidContainer = requires(Container c, size_t size) {
  */
 
 template <
-    class DataType,
-    class NodeType = DefaultLFQNode<DataType>,
-    class Container = std::deque<NodeType>,
-    class Allocator = std::allocator<DataType>                 //Only for data allocation.
+    typename DataType,
+    typename NodeType = DefaultLFQNode<DataType>,
+    typename Container = std::deque<NodeType>,
+    typename Allocator = std::allocator<DataType>                 //Only for data allocation.
 > requires ValidNodeType<NodeType, DataType> && ValidContainer<Container, NodeType>
 class LockFreeQueue {
 private:
