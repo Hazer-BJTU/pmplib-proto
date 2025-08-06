@@ -10,43 +10,26 @@
 
 namespace mpengine {
 
-template<typename, typename, typename, typename, typename>
-class FiniteStateMachine;
-
 template<typename NodeIndex, typename Event>
 requires requires(std::ostream& stream, const NodeIndex& index, const Event& event) {
     { stream << index } -> std::same_as<std::ostream&>;
     { stream << event } -> std::same_as<std::ostream&>;
 }
-class FSMNode {
-public:
+struct FSMNode {
     using NodePtr = FSMNode*;
     struct edge {
         NodePtr source, target;
         std::function<void()> action;
     };
-private:
     bool ending;
     NodeIndex index;
     std::unordered_map<Event, edge> transition_chart;
-    template<
-        typename FSMNodeIndexType, 
-        typename FSMEventType, 
-        typename FSMNodeType, 
-        typename FSMNodeAllocatorType,
-        typename FSMEventListType
-    >
-    requires std::is_same_v<FSMNodeIndexType, NodeIndex> && 
-             std::is_same_v<FSMEventType, Event>
-    friend class FiniteStateMachine;
-public:
     FSMNode(const NodeIndex& input_index, bool ending = false): index(input_index), transition_chart(), ending(ending) {}
     virtual ~FSMNode() {}
     FSMNode(const FSMNode&) = default;
     FSMNode& operator = (const FSMNode&) = default;
     FSMNode(FSMNode&&) = default;
     FSMNode& operator = (FSMNode&&) = default;
-private:
     NodePtr step(const Event& event) {
         auto it = transition_chart.find(event);
         if (it == transition_chart.end()) {
@@ -78,14 +61,22 @@ private:
     }
 };
 
-template<typename NodeIndex, typename Event, typename Node, typename NodeAllocator, typename EventList>
-concept ValidFSMTamplateParams = requires {
-    requires std::equality_comparable<NodeIndex>;
-    requires std::hash<NodeIndex>;
-    requires std::equality_comparable<Event>;
-    requires std::hash<Event>;
-    requires std::is_same_v<typename EventList::value_type, Event>;
-    requires std::is_base_of<FSMNode<NodeIndex, Event>, Node>;
+template<
+    typename NodeIndex,
+    typename Event,
+    typename Node,
+    typename NodeAllocator,
+    typename EventList
+> concept ValidFSMTemplateParams = 
+std::copy_constructible<NodeIndex> &&
+std::equality_comparable<NodeIndex> &&
+std::copy_constructible<Event> &&
+std::equality_comparable<Event> &&
+requires(NodeIndex index, Event event, NodeAllocator allocator) {
+    requires std::is_base_of_v<FSMNode<NodeIndex, Event>, Node>;
+    { std::hash<NodeIndex>{}(index) } -> std::convertible_to<std::size_t>;
+    { std::hash<Event>{}(event) } -> std::convertible_to<std::size_t>;
+    { std::allocate_shared<Node>(allocator, index) } -> std::same_as<std::shared_ptr<Node>>;
 };
 
 template<
@@ -94,7 +85,7 @@ template<
     typename Node = FSMNode<NodeIndex, Event>,
     typename NodeAllocator = std::allocator<Node>,
     typename EventList = std::basic_string<Event>
-> requires ValidFSMTamplateParams<NodeIndex, Event, Node, NodeAllocator, EventList>
+> requires ValidFSMTemplateParams<NodeIndex, Event, Node, NodeAllocator, EventList>
 class FiniteStateMachine {
 public:
     using NodeSPtr = std::shared_ptr<Node>;
