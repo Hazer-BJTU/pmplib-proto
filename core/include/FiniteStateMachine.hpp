@@ -239,4 +239,40 @@ public:
 
 using Automaton = FiniteStateMachine<std::string, char, FSMNode<std::string, char>, std::allocator<FSMNode<std::string, char>>, std::string>;
 
+struct cs {
+    static constexpr std::string_view digits = "0123456789";
+    static constexpr std::string_view lowercase = "abcdefghijklmnopqrstuvwxyz";
+    static constexpr std::string_view uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    static constexpr std::string_view punctuation = "!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~";
+    static constexpr std::string_view alphanumeric = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    static constexpr std::string_view whitespace = " \t\n\r\v\f";
+    static constexpr std::string_view control = "\0\a\b\t\n\v\f\r\e";
+    static constexpr std::string_view visible = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~";
+    static constexpr std::string_view any = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ \t\n\r\v\f\0\a\b\t\n\v\f\r\e";
+    static constexpr std::string_view base64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+    static constexpr std::string_view hex = "0123456789ABCDEFabcdef";
+    static constexpr std::string_view url = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+    static constexpr std::string_view xml = "<>&\"\'";
+    static bool in(std::string_view charset1, std::string_view charset2) noexcept {
+        for (const char& c: charset1) {
+            if (charset2.find(c) == std::string_view::npos) {
+                return false;
+            }
+        }
+        return true;
+    }
+    static std::string except(std::string_view charset1, std::string_view charset2) noexcept {
+        std::string result;
+        for (const char& c: charset1) {
+            if (charset2.find(c) == std::string_view::npos) {
+                result.push_back(c);
+            }
+        }
+        return result;
+    }
+    static std::string concate(std::string_view charset1, std::string_view charset2) noexcept {
+        return std::string(charset1) + std::string(charset2);
+    }
+};
+
 }

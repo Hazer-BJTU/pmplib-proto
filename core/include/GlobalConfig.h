@@ -2,6 +2,7 @@
 
 #include <regex>
 #include <cctype>
+#include <vector>
 #include <variant>
 #include <iostream>
 #include <string_view>
@@ -9,6 +10,7 @@
 #include <shared_mutex>
 
 #include "RuntimeLog.h"
+#include "FiniteStateMachine.hpp"
 
 #ifdef MPENGINE_CONFIG_LOAD_DEFAULT
 #include "DefaultConfigs.hpp"
@@ -202,6 +204,27 @@ public:
     }
     void export_all() const noexcept;
     void read_from(std::string filepath = "") noexcept;
+};
+
+class ConfigParser: public Automaton {
+private:
+    std::vector<std::pair<std::string, std::string>> tokens;
+    void initialize() noexcept {
+        add_node("Initial");
+        add_node("KeyField");
+        add_node("Colon");
+        add_node("Terminal");
+        add_node("ValueString");
+        add_node("ValueOthers");
+        add_node("StartDomain");
+        add_node("EndDomain");
+        add_node("Comma");
+    }
+public:
+    ConfigParser() {
+        initialize();
+    }
+    ~ConfigParser() override {}
 };
 
 }
