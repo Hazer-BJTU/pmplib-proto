@@ -10,6 +10,20 @@
 
 namespace mpengine {
 
+/**
+ * @class FSMNode
+ * @brief Template class representing a node in a Finite State Machine
+ * 
+ * @tparam NodeIndex Type used to identify nodes, must be streamable
+ * @tparam Event Type representing events/transitions, must be streamable
+ * 
+ * This class represents a single state in a finite state machine with 
+ * transitions triggered by events. Each transition can have an associated action.
+ * 
+ * @author Hazer
+ * @date 2025/8/6
+ */
+
 template<typename NodeIndex, typename Event>
 requires requires(std::ostream& stream, const NodeIndex& index, const Event& event) {
     { stream << index } -> std::same_as<std::ostream&>;
@@ -72,12 +86,32 @@ std::copy_constructible<NodeIndex> &&
 std::equality_comparable<NodeIndex> &&
 std::copy_constructible<Event> &&
 std::equality_comparable<Event> &&
-requires(NodeIndex index, Event event, NodeAllocator allocator) {
+std::same_as<typename EventList::value_type, Event> &&
+requires(NodeIndex index, Event event, NodeAllocator allocator, EventList list) {
     requires std::is_base_of_v<FSMNode<NodeIndex, Event>, Node>;
     { std::hash<NodeIndex>{}(index) } -> std::convertible_to<std::size_t>;
     { std::hash<Event>{}(event) } -> std::convertible_to<std::size_t>;
+    { list.begin() } -> std::same_as<typename EventList::iterator>;
+    { list.end() } -> std::same_as<typename EventList::iterator>;
     { std::allocate_shared<Node>(allocator, index) } -> std::same_as<std::shared_ptr<Node>>;
 };
+
+/**
+ * @class FiniteStateMachine
+ * @brief Template class implementing a Finite State Machine
+ * 
+ * @tparam NodeIndex Type used to identify nodes
+ * @tparam Event Type representing events/transitions 
+ * @tparam Node Node type (defaults to FSMNode<NodeIndex, Event>)
+ * @tparam NodeAllocator Allocator type for nodes (default std::allocator<Node>)
+ * @tparam EventList Container type for event sequences (default std::basic_string<Event>)
+ * 
+ * This class provides a complete FSM implementation with state management,
+ * transitions, and event processing capabilities.
+ * 
+ * @author Hazer
+ * @date 2025/8/6
+ */
 
 template<
     typename NodeIndex, 
