@@ -208,20 +208,33 @@ public:
 
 class ConfigParser: public Automaton {
 private:
+    std::string matched;
     std::vector<std::pair<std::string, std::string>> tokens;
     void initialize() noexcept {
+        const std::string key_cs = cs::except(cs::text, "\"<>{}:,");
+        const std::string value_cs = cs::except(cs::text, "<>{}:,");
         add_node("Initial");
-        add_node("KeyField");
+        add_node("Ready");
+        add_node("Key");
+        add_node("KeyEnd");
         add_node("Colon");
-        add_node("Terminal");
-        add_node("ValueString");
-        add_node("ValueOthers");
-        add_node("StartDomain");
-        add_node("EndDomain");
-        add_node("Comma");
+        add_node("Value");
+        add_node("ValueEnd");
+        add_node("Terminal", true);
+        add_transition("Initial", "Initial", cs::invisible);
+        add_transition("Initial", "Ready", '{');
+        add_transition("Ready", "Ready", cs::invisible);
+        add_transition("Ready", "Key", '\"', [this] { matched.clear(); });
+        add_transition("Key", "Key", key_cs, [this] { matched.push_back(_current_event); });
+        add_transition("Key", "KeyEnd", '\"', [this] { tokens.emplace_back("key", matched); matched.clear(); });
+        add_transition("KeyEnd", "KeyEnd", cs::invisible);
+        add_transition("KeyEnd", "Colon", ':');
+        add_transition("Colon", "Colon", cs::invisible);
+        add_transition("Colon", "Value", cs::except(cs::text, " "), [this] { matched.clear(); matched.push_back(_current_event); });
+
     }
 public:
-    ConfigParser() {
+    ConfigParser(): matched(), tokens() {
         initialize();
     }
     ~ConfigParser() override {}

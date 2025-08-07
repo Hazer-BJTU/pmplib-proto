@@ -137,7 +137,7 @@ public:
     FiniteStateMachine(FiniteStateMachine&&) = default;
     FiniteStateMachine& operator = (FiniteStateMachine&&) = default;
 protected:
-    Event current_event;
+    Event _current_event;
     template<typename... Args>
     bool add_node(const NodeIndex& index, Args&&... args) noexcept {
         if (nodes.find(index) != nodes.end()) {
@@ -160,36 +160,46 @@ protected:
         return true;
     }
     template<typename... Args>
-    bool add_transition(const NodeIndex& source, const NodeIndex& target, Args&&... args) noexcept {
+    bool add_transition(const NodeIndex& source, const NodeIndex& target, const Event& event, Args&&... args) noexcept {
         auto it_source = nodes.find(source), it_target = nodes.find(target);
         if (it_source == nodes.end() || it_target == nodes.end()) {
             return false;
         }
-        it_source->second->add_transition(it_target->second.get(), std::forward<Args>(args)...);
+        it_source->second->add_transition(it_target->second.get(), event, std::forward<Args>(args)...);
         return true;
     }
     template<typename... Args>
-    bool add_transitions(const NodeIndex& source, const NodeIndex& target, const EventList& events, Args&&... args) noexcept {
+    bool add_transition(const NodeIndex& source, const NodeIndex& target, const EventList& events, Args&&... args) noexcept {
         bool flag = true;
         for (auto it = events.begin(); it != events.end(); it++) {
-            flag &= add_transition(source, target, *it, std::forward<Args>(args)...);
+            auto it_source = nodes.find(source), it_target = nodes.find(target);
+            if (it_source == nodes.end() || it_target == nodes.end()) {
+                flag = false;
+                continue;
+            }
+            it_source->second->add_transition(it_target->second.get(), *it, std::forward<Args>(args)...);
         }
         return flag;
     }
     template<typename... Args>
-    bool add_error_transition(const NodeIndex& source, Args&&... args) noexcept {
+    bool add_error_transition(const NodeIndex& source, const Event& event, Args&&... args) noexcept {
         auto it_source = nodes.find(source);
         if (it_source == nodes.end()) {
             return false;
         }
-        it_source->second->add_transition(nullptr, std::forward<Args>(args)...);
+        it_source->second->add_transition(nullptr, event, std::forward<Args>(args)...);
         return true;
     }
     template<typename... Args>
-    bool add_error_transitions(const NodeIndex& source, const EventList& events, Args&&... args) noexcept {
+    bool add_error_transition(const NodeIndex& source, const EventList& events, Args&&... args) noexcept {
         bool flag = true;
         for (auto it = events.begin(); it != events.end(); it++) {
-            flag &= add_error_transition(source, *it, std::forward<Args>(args)...);
+            auto it_source = nodes.find(source);
+            if (it_source == nodes.end()) {
+                flag = false;
+                continue;
+            }
+            it_source->second->add_transition(nullptr, *it, std::forward<Args>(args)...);
         }
         return flag;
     }
@@ -206,7 +216,7 @@ public:
             throw PUTILS_GENERAL_EXCEPTION("Initial state is not set.", "FSM error");
         }
         try {
-            current_event = event;
+            _current_event = event;
             p = p->step(event);
             return p->ending;
         } PUTILS_CATCH_THROW_GENERAL
@@ -217,7 +227,7 @@ public:
         }
         try {
             for (auto it = events.begin(); it != events.end(); it++) {
-                current_event = *it;
+                _current_event = *it;
                 p = p->step(*it);
             }
             return p->ending;
@@ -240,19 +250,17 @@ public:
 using Automaton = FiniteStateMachine<std::string, char, FSMNode<std::string, char>, std::allocator<FSMNode<std::string, char>>, std::string>;
 
 struct cs {
-    static constexpr std::string_view digits = "0123456789";
-    static constexpr std::string_view lowercase = "abcdefghijklmnopqrstuvwxyz";
-    static constexpr std::string_view uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    static constexpr std::string_view punctuation = "!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~";
-    static constexpr std::string_view alphanumeric = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    static constexpr std::string_view whitespace = " \t\n\r\v\f";
-    static constexpr std::string_view control = "\0\a\b\t\n\v\f\r\e";
-    static constexpr std::string_view visible = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~";
-    static constexpr std::string_view any = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ \t\n\r\v\f\0\a\b\t\n\v\f\r\e";
-    static constexpr std::string_view base64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-    static constexpr std::string_view hex = "0123456789ABCDEFabcdef";
-    static constexpr std::string_view url = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
-    static constexpr std::string_view xml = "<>&\"\'";
+    static const std::string digits;
+    static const std::string lowercase;
+    static const std::string uppercase;
+    static const std::string punctuation;
+    static const std::string alphanumeric;
+    static const std::string whitespace;
+    static const std::string control;
+    static const std::string invisible;
+    static const std::string visible;
+    static const std::string text;
+    static const std::string any;
     static bool in(std::string_view charset1, std::string_view charset2) noexcept {
         for (const char& c: charset1) {
             if (charset2.find(c) == std::string_view::npos) {
@@ -261,7 +269,7 @@ struct cs {
         }
         return true;
     }
-    static std::string except(std::string_view charset1, std::string_view charset2) noexcept {
+    static const std::string except(std::string_view charset1, std::string_view charset2) noexcept {
         std::string result;
         for (const char& c: charset1) {
             if (charset2.find(c) == std::string_view::npos) {
@@ -270,9 +278,21 @@ struct cs {
         }
         return result;
     }
-    static std::string concate(std::string_view charset1, std::string_view charset2) noexcept {
+    static const std::string concate(std::string_view charset1, std::string_view charset2) noexcept {
         return std::string(charset1) + std::string(charset2);
     }
 };
+
+const std::string cs::digits = "0123456789";
+const std::string cs::lowercase = "abcdefghijklmnopqrstuvwxyz";
+const std::string cs::uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const std::string cs::punctuation = "!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~";
+const std::string cs::alphanumeric = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const std::string cs::whitespace = " \t\n\r\v\f";
+const std::string cs::control = "\0\a\b\t\n\v\f\r\e";
+const std::string cs::invisible = " \t\n\r\v\f\0\a\b\t\n\v\f\r\e";
+const std::string cs::visible = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~";
+const std::string cs::text = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ ";
+const std::string cs::any = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ \t\n\r\v\f\0\a\b\t\n\v\f\r\e";
 
 }

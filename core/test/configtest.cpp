@@ -2,6 +2,6 @@
 
 int main() {
     using namespace mpengine;
-    std::cout << cs::except(cs::any, cs::concate(cs::whitespace, cs::control));
+    std::cout << cs::except(cs::digits, "0");
     return 0;
 }
