@@ -49,6 +49,8 @@ set_target_properties(
     "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/core_post"
 )
 
+message(STATUS "<core>- Export default configurations to ${PROJECT_SOURCE_DIR}/config/configurations.conf")
+
 add_custom_target(core_export_default_configs ALL
     DEPENDS print_default_configs
     COMMAND $<TARGET_FILE:print_default_configs> "${PROJECT_SOURCE_DIR}/config/configurations.conf"
