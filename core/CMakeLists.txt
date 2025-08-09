@@ -37,3 +37,19 @@ if(GENERATE_TEST_TARGETS)
 else()
     message(STATUS "<core>- Skip generating test targets for core.")
 endif()
+
+message(STATUS "<core>- Start post-compile operations for core.")
+message(STATUS "<core>- core post-compile operations flags used: ${COMPILER_OPTION_FLAGS}")
+
+add_executable(print_default_configs "post/printdefaultconfigs.cpp")
+target_link_options(print_default_configs PRIVATE ${COMPILER_OPTION_FLAGS})
+target_link_libraries(print_default_configs core)
+set_target_properties(
+    print_default_configs PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+    "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/core_post"
+)
+
+add_custom_target(core_export_default_configs ALL
+    DEPENDS print_default_configs
+    COMMAND $<TARGET_FILE:print_default_configs> "${PROJECT_SOURCE_DIR}/config/configurations.conf"
+)

@@ -136,8 +136,6 @@ public:
     using NodePtr = std::shared_ptr<ConfigNode>;
 private:
     static const std::regex valid_key;
-    static const std::regex comments;
-    static const std::regex valid_doc_char;
     static std::string config_filepath;
     static size_t indent;
     static std::mutex setting_lock;
@@ -153,7 +151,6 @@ private:
         const size_t indent, 
         size_t layer = 0
     ) const noexcept;
-    static std::string_view extract_parse_field(std::string_view config_str, std::string& domain, size_t& p) noexcept;
     void parse_and_set(const std::string& config_str);
 public:
     GlobalConfig(const GlobalConfig&) = delete;
@@ -202,8 +199,8 @@ public:
             }
         }
     }
-    void export_all() const noexcept;
-    void read_from(std::string filepath = "") noexcept;
+    void export_all(const std::string& input_filepath = "") const noexcept;
+    void read_from(const std::string& input_filepath = "") noexcept;
 };
 
 class ConfigParser: public Automaton {

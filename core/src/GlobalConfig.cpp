@@ -80,8 +80,6 @@ ConfigValueNode::ConfigValueNode(ConfigType&& value): value(std::forward<ConfigT
 ConfigValueNode::~ConfigValueNode() {}
 
 const std::regex GlobalConfig::valid_key("[a-zA-Z0-9-_.]+(/[a-zA-Z0-9-_.]+)*");
-const std::regex GlobalConfig::comments("<.*?>");
-const std::regex GlobalConfig::valid_doc_char("[a-zA-Z0-9-_.\":{,}]+");
 std::string GlobalConfig::config_filepath("configurations.conf");
 size_t GlobalConfig::indent = 4;
 std::mutex GlobalConfig::setting_lock;
@@ -210,14 +208,18 @@ void GlobalConfig::recursive_write(
     return;
 }
 
-void GlobalConfig::export_all() const noexcept {
+void GlobalConfig::export_all(const std::string& input_filepath) const noexcept {
     auto& logger = putils::RuntimeLog::get_global_log();
     std::shared_lock<std::shared_mutex> slock(config_lock);
     std::string filepath;
     size_t indent;
     {
-        std::lock_guard<std::mutex> lock(setting_lock);
-        filepath = GlobalConfig::config_filepath;
+        std::lock_guard<std::mutex> lock(GlobalConfig::setting_lock);
+        if (input_filepath == "") {
+            filepath = GlobalConfig::config_filepath;
+        } else {
+            filepath = input_filepath;
+        }
         indent = GlobalConfig::indent;
     }
     std::ofstream file_out(filepath, std::ios::out);
@@ -228,23 +230,6 @@ void GlobalConfig::export_all() const noexcept {
     recursive_write("", root, file_out, indent, 0);
     file_out.close();
     return;
-}
-
-std::string_view GlobalConfig::extract_parse_field(std::string_view config_str, std::string& domain, size_t& p) noexcept {
-    domain.clear();
-    if (p >= config_str.length()) {
-        return "PARSE_OVER";
-    }
-    while(p < config_str.length()) {
-        switch(config_str[p]) {
-            case ':' : p++; return "KEY_FIELD";
-            case '{' : p++; return "START_DOMAIN";
-            case '}' : p++; return "END_DOMAIN";
-            case ',' : p++; return "END_FIELD";
-            default : domain.push_back(config_str[p]); p++;
-        }
-    }
-    return "UNEXPECTED_EOS";
 }
 
 void GlobalConfig::parse_and_set(const std::string& config_str) {
@@ -297,11 +282,14 @@ void GlobalConfig::parse_and_set(const std::string& config_str) {
     return;
 }
 
-void GlobalConfig::read_from(std::string filepath) noexcept {
+void GlobalConfig::read_from(const std::string& input_filepath) noexcept {
     auto& logger = putils::RuntimeLog::get_global_log();
-    if (filepath.empty()) {
+    std::string filepath;
+    if (input_filepath == "") {
         std::lock_guard<std::mutex> lock(GlobalConfig::setting_lock);
         filepath = GlobalConfig::config_filepath;
+    } else {
+        filepath = input_filepath;
     }
     std::ifstream file_in(filepath, std::ios::in);
     if (!file_in.is_open()) {
