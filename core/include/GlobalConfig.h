@@ -154,7 +154,7 @@ private:
         size_t layer = 0
     ) const noexcept;
     static std::string_view extract_parse_field(std::string_view config_str, std::string& domain, size_t& p) noexcept;
-    void parse_and_set(std::string config_str);
+    void parse_and_set(const std::string& config_str);
 public:
     GlobalConfig(const GlobalConfig&) = delete;
     GlobalConfig& operator = (const GlobalConfig&) = delete;
@@ -213,19 +213,18 @@ private:
     std::string matched;
     std::vector<std::pair<identifier, std::string>> tokens;
     void initialize() noexcept {
-        add_node("Initial");
-        add_node("Ready", true);
+        const bool stop_advance = true, accepted_state = true;
+        const std::string cs_value = cs::concate(cs::alphanumeric, "+-.");
+        add_node("Ready");
         add_node("Key");
         add_node("KeyEnd");
         add_node("Colon");
         add_node("ValueString");
         add_node("ValueOthers");
-        add_node("ValueEnd");
-        add_transition("Initial", "Initial", cs::whitespace);
-        add_transition("Initial", "Ready", '{', [this] { tokens.emplace_back(identifier::bracket, "{"); });
+        add_node("ValueEnd", accepted_state);
         add_transition("Ready", "Ready", cs::whitespace);
-        add_transition("Ready", "Ready", ',');
-        add_transition("Ready", "Ready", '}', [this] { tokens.emplace_back(identifier::bracket, "}"); });
+        add_transition("Ready", "Ready", '{', [this] { tokens.emplace_back(identifier::bracket, "{"); });
+        add_transition("Ready", "ValueEnd", '}', [this] { tokens.emplace_back(identifier::bracket, "}"); });
         add_transition("Ready", "Key", '\"', [this] { matched.clear(); });
         add_transition("Key", "Key", cs::except(cs::text, "\""), [this] { matched.push_back(_current_event); });
         add_transition("Key", "KeyEnd", '\"', [this] { tokens.emplace_back(identifier::key, matched); });
@@ -233,18 +232,16 @@ private:
         add_transition("KeyEnd", "Colon", ':');
         add_transition("Colon", "Colon", cs::whitespace);
         add_transition("Colon", "ValueString", '\"', [this] { matched.clear(); matched.push_back(_current_event); });
-        add_transition("Colon", "ValueOthers", cs::concate(cs::alphanumeric, "+-."), [this] { matched.clear(); matched.push_back(_current_event); });
+        add_transition("Colon", "ValueOthers", cs_value, [this] { matched.clear(); matched.push_back(_current_event); });
         add_transition("Colon", "Ready", '{', [this] { tokens.emplace_back(identifier::bracket, "{"); });
         add_transition("ValueString", "ValueString", cs::except(cs::text, "\""), [this] { matched.push_back(_current_event); });
         add_transition("ValueString", "ValueEnd", "\"", [this] { matched.push_back(_current_event); tokens.emplace_back(identifier::value, matched); });
-        add_transition("ValueOthers", "ValueOthers", cs::concate(cs::alphanumeric, "+-."), [this] { matched.push_back(_current_event); });
-        add_transition("ValueOthers", "ValueEnd", cs::whitespace, [this] { tokens.emplace_back(identifier::value, matched); });
-        add_transition("ValueOthers", "Ready", ',', [this] { tokens.emplace_back(identifier::value, matched); });
-        add_transition("ValueOthers", "Ready", '}', [this] { tokens.emplace_back(identifier::value, matched); tokens.emplace_back(identifier::bracket, "}"); });
+        add_transition("ValueOthers", "ValueOthers", cs_value, [this] { matched.push_back(_current_event); });
+        add_transition("ValueOthers", "ValueEnd", cs::except(cs::any, cs_value), [this] { tokens.emplace_back(identifier::value, matched); }, stop_advance);
         add_transition("ValueEnd", "ValueEnd", cs::whitespace);
+        add_transition("ValueEnd", "ValueEnd", '}', [this] { tokens.emplace_back(identifier::bracket, "}"); });
         add_transition("ValueEnd", "Ready", ',');
-        add_transition("ValueEnd", "Ready", '}', [this] { tokens.emplace_back(identifier::bracket, "}"); });
-        set_starting("Initial");
+        set_starting("Ready");
     }
 public:
     ConfigParser(): matched(), tokens() {
@@ -256,8 +253,7 @@ public:
         tokens.clear();
         try {
             steps(configs);
-        } catch(const std::exception& e) {
-            std::cout << e.what() << std::endl;
+        } catch(...) {
             return false;
         }
         if (!accepted()) {

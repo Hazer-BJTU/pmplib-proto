@@ -89,7 +89,7 @@ std::mutex GlobalConfig::setting_lock;
 GlobalConfig::GlobalConfig(): root(nullptr), config_lock() {
     #ifdef MPENGINE_CONFIG_LOAD_DEFAULT
         try {
-            parse_and_set(MPENGINE_DEFAULT_CONFIGURATIONS_STRING);
+            parse_and_set(std::string{MPENGINE_DEFAULT_CONFIGURATIONS_STRING});
         } catch(...) {
             root = std::make_shared<ConfigDomainNode>();
         }
@@ -247,67 +247,51 @@ std::string_view GlobalConfig::extract_parse_field(std::string_view config_str, 
     return "UNEXPECTED_EOS";
 }
 
-void GlobalConfig::parse_and_set(std::string config_str) {
-    //Remove all invisible characters.
-    auto new_end = std::remove_if(config_str.begin(), config_str.end(), [] (char c) { return std::isspace(c); });
-    config_str.erase(new_end, config_str.end());
-    //Remove comments.
-    config_str = std::regex_replace(config_str, GlobalConfig::comments, "");
-    if (config_str.empty() || !std::regex_match(config_str, GlobalConfig::valid_doc_char)) {
-        throw PUTILS_GENERAL_EXCEPTION("(Configurations): Wrong configuration file format - invalid characters or comments.", "invalid doc format");
+void GlobalConfig::parse_and_set(const std::string& config_str) {
+    ConfigParser config_parser;
+    std::vector<std::pair<ConfigParser::identifier, std::string>> tokens;
+    bool successful = config_parser.parse_and_get_tokens(config_str, tokens);
+    if (!successful) {
+        throw PUTILS_GENERAL_EXCEPTION("(Configurations):  Wrong configuration file format.", "invalid config format");
     }
-    if (!config_str.empty() && config_str.front() == '{' && config_str.back() == '}') {
-        config_str = config_str.substr(1, config_str.length() - 2);
-    }
-    size_t p = 0;
-    std::string domain;
-    //Reset config tree.
-    root = std::make_shared<ConfigDomainNode>();
-    std::string_view state;
     std::stack<NodePtr> node_stack;
+    root = std::make_shared<ConfigDomainNode>();
     node_stack.push(root);
-    while((state = extract_parse_field(config_str, domain, p)) != "PARSE_OVER") {
+    auto it = tokens.begin();
+    int brackets = 0;
+    if (it != tokens.end() && it->first == ConfigParser::identifier::bracket && it->second == "{") {
+        brackets++;
+        it++;
+    }
+    while(it != tokens.end()) {
         auto& node = node_stack.top();
-        if (state == "UNEXPECTED_EOS") {
-            throw PUTILS_GENERAL_EXCEPTION("(Configurations): Wrong configuration file format - unexpected end of string.", "invalid doc format");
-        } else if (state == "KEY_FIELD") {
-            if (domain.empty()) {
-                throw PUTILS_GENERAL_EXCEPTION("(Configurations): Wrong configuration file format - invalid key field.", "invalid doc format");
-            }
-            if (domain.front() == '\"' && domain.back() == '\"') {
-                domain = domain.substr(1, domain.length() - 2);
-            }
-            std::string new_domain;
-            std::string_view new_state = extract_parse_field(config_str, new_domain, p);
-            if (new_state == "START_DOMAIN") {
-                auto dnode = std::dynamic_pointer_cast<ConfigDomainNode>(node);
-                if (!dnode) {
-                    throw PUTILS_GENERAL_EXCEPTION("(Configurations): Value type nodes cannot add subdomains.", "type error");
+        if (it->first == ConfigParser::identifier::bracket) {
+            if (it->second == "}") {
+                brackets--;
+                it++;
+                node_stack.pop();
+                if (brackets == 0) {
+                    break;
                 }
-                auto [new_it, inserted] = dnode->children.insert(std::make_pair(domain, std::make_shared<ConfigDomainNode>()));
-                node_stack.push(new_it->second);
-            } else if (new_state == "END_FIELD" || new_state == "END_DOMAIN") {
-                if (!new_domain.empty()) {
-                    auto dnode = std::dynamic_pointer_cast<ConfigDomainNode>(node);
-                    if (!dnode) {
-                        throw PUTILS_GENERAL_EXCEPTION("(Configurations): Value type nodes cannot add subdomains.", "type error");
-                    }
-                    dnode->children.insert(std::make_pair(domain, std::make_shared<ConfigValueNode>(std::move(ConfigType().convert(new_domain)))));
-                }
-                if (new_state == "END_DOMAIN") {
-                    node_stack.pop();
-                }
-            } else if (new_state == "UNEXPECTED_EOS") {
-                throw  PUTILS_GENERAL_EXCEPTION("(Configurations): Wrong configuration file format - unexpected end of string.", "invalid doc format");
-            } else if (new_state == "KEY_FIELD") {
-                throw PUTILS_GENERAL_EXCEPTION("(Configurations): Wrong configuration file format - empty value field.", "invalid doc format");
+            } else if (it->second == "{") {
+                throw PUTILS_GENERAL_EXCEPTION("(Configurations): Missing key declaration.", "invalid config format");
             }
-        } else if (state == "END_FIELD") {
-            continue;
-        } else if (state == "END_DOMAIN"){
-            node_stack.pop();
-        } else {
-            throw PUTILS_GENERAL_EXCEPTION("(Configurations): Wrong configuration file format - invalid key field.", "invalid doc format");
+        } else if (it->first == ConfigParser::identifier::key) {
+            std::string key_name = it->second; it++;
+            if (it == tokens.end()) {
+                throw PUTILS_GENERAL_EXCEPTION("(Configurations):  Isolated key declaration.", "invalid config format");
+            }
+            auto dnode = std::dynamic_pointer_cast<ConfigDomainNode>(node);
+            if (!dnode) {
+                throw PUTILS_GENERAL_EXCEPTION("(Configurations): Value type nodes cannot add subdomains.", "type error");
+            }
+            if (it->first == ConfigParser::identifier::bracket) {
+                auto [new_node, inserted] = dnode->children.insert(std::make_pair(key_name, std::make_shared<ConfigDomainNode>()));
+                node_stack.push(new_node->second);
+            } else if (it->first == ConfigParser::identifier::value) {
+                dnode->children.insert(std::make_pair(key_name, std::make_shared<ConfigValueNode>(std::move(ConfigType().convert(it->second)))));
+            }
+            it++;
         }
     }
     return;

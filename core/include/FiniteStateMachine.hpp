@@ -263,17 +263,17 @@ public:
 using Automaton = FiniteStateMachine<std::string, char, FSMNode<std::string, char>, std::allocator<FSMNode<std::string, char>>, std::string>;
 
 struct cs {
-    static const std::string digits;
-    static const std::string lowercase;
-    static const std::string uppercase;
-    static const std::string punctuation;
-    static const std::string alphanumeric;
-    static const std::string whitespace;
-    static const std::string control;
-    static const std::string invisible;
-    static const std::string visible;
-    static const std::string text;
-    static const std::string any;
+    static inline const std::string digits = "0123456789";
+    static inline const std::string lowercase = "abcdefghijklmnopqrstuvwxyz";
+    static inline const std::string uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    static inline const std::string punctuation = "!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~";
+    static inline const std::string alphanumeric = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    static inline const std::string whitespace = " \t\n\r\v\f";
+    static inline const std::string control = "\0\a\b\t\n\v\f\r\e";
+    static inline const std::string invisible = " \t\n\r\v\f\0\a\b\t\n\v\f\r\e";
+    static inline const std::string visible = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~";
+    static inline const std::string text = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ \n";
+    static inline const std::string any = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ \t\n\r\v\f\0\a\b\t\n\v\f\r\e";
     static bool in(std::string_view charset1, std::string_view charset2) noexcept {
         for (const char& c: charset1) {
             if (charset2.find(c) == std::string_view::npos) {
@@ -295,17 +295,5 @@ struct cs {
         return std::string(charset1) + std::string(charset2);
     }
 };
-
-const std::string cs::digits = "0123456789";
-const std::string cs::lowercase = "abcdefghijklmnopqrstuvwxyz";
-const std::string cs::uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const std::string cs::punctuation = "!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~";
-const std::string cs::alphanumeric = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const std::string cs::whitespace = " \t\n\r\v\f";
-const std::string cs::control = "\0\a\b\t\n\v\f\r\e";
-const std::string cs::invisible = " \t\n\r\v\f\0\a\b\t\n\v\f\r\e";
-const std::string cs::visible = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~";
-const std::string cs::text = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ ";
-const std::string cs::any = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ \t\n\r\v\f\0\a\b\t\n\v\f\r\e";
 
 }
