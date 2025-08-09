@@ -16,7 +16,7 @@ else()
     set(COMPILER_OPTION_FLAGS "-g" "-rdynamic" "-O3")
 endif()
 
-message(STATUS "Global option flags used: ${COMPILER_OPTION_FLAGS}")
+message(STATUS "[Global]- Global option flags used: ${COMPILER_OPTION_FLAGS}")
 add_compile_options(${COMPILER_OPTION_FLAGS})
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/lib")

@@ -207,37 +207,65 @@ public:
 };
 
 class ConfigParser: public Automaton {
+public:
+    enum class identifier { bracket, key, value };
 private:
     std::string matched;
-    std::vector<std::pair<std::string, std::string>> tokens;
+    std::vector<std::pair<identifier, std::string>> tokens;
     void initialize() noexcept {
-        const std::string key_cs = cs::except(cs::text, "\"<>{}:,");
-        const std::string value_cs = cs::except(cs::text, "<>{}:,");
         add_node("Initial");
-        add_node("Ready");
+        add_node("Ready", true);
         add_node("Key");
         add_node("KeyEnd");
         add_node("Colon");
-        add_node("Value");
+        add_node("ValueString");
+        add_node("ValueOthers");
         add_node("ValueEnd");
-        add_node("Terminal", true);
-        add_transition("Initial", "Initial", cs::invisible);
-        add_transition("Initial", "Ready", '{');
-        add_transition("Ready", "Ready", cs::invisible);
+        add_transition("Initial", "Initial", cs::whitespace);
+        add_transition("Initial", "Ready", '{', [this] { tokens.emplace_back(identifier::bracket, "{"); });
+        add_transition("Ready", "Ready", cs::whitespace);
+        add_transition("Ready", "Ready", ',');
+        add_transition("Ready", "Ready", '}', [this] { tokens.emplace_back(identifier::bracket, "}"); });
         add_transition("Ready", "Key", '\"', [this] { matched.clear(); });
-        add_transition("Key", "Key", key_cs, [this] { matched.push_back(_current_event); });
-        add_transition("Key", "KeyEnd", '\"', [this] { tokens.emplace_back("key", matched); matched.clear(); });
-        add_transition("KeyEnd", "KeyEnd", cs::invisible);
+        add_transition("Key", "Key", cs::except(cs::text, "\""), [this] { matched.push_back(_current_event); });
+        add_transition("Key", "KeyEnd", '\"', [this] { tokens.emplace_back(identifier::key, matched); });
+        add_transition("KeyEnd", "KeyEnd", cs::whitespace);
         add_transition("KeyEnd", "Colon", ':');
-        add_transition("Colon", "Colon", cs::invisible);
-        add_transition("Colon", "Value", cs::except(cs::text, " "), [this] { matched.clear(); matched.push_back(_current_event); });
-
+        add_transition("Colon", "Colon", cs::whitespace);
+        add_transition("Colon", "ValueString", '\"', [this] { matched.clear(); matched.push_back(_current_event); });
+        add_transition("Colon", "ValueOthers", cs::concate(cs::alphanumeric, "+-."), [this] { matched.clear(); matched.push_back(_current_event); });
+        add_transition("Colon", "Ready", '{', [this] { tokens.emplace_back(identifier::bracket, "{"); });
+        add_transition("ValueString", "ValueString", cs::except(cs::text, "\""), [this] { matched.push_back(_current_event); });
+        add_transition("ValueString", "ValueEnd", "\"", [this] { matched.push_back(_current_event); tokens.emplace_back(identifier::value, matched); });
+        add_transition("ValueOthers", "ValueOthers", cs::concate(cs::alphanumeric, "+-."), [this] { matched.push_back(_current_event); });
+        add_transition("ValueOthers", "ValueEnd", cs::whitespace, [this] { tokens.emplace_back(identifier::value, matched); });
+        add_transition("ValueOthers", "Ready", ',', [this] { tokens.emplace_back(identifier::value, matched); });
+        add_transition("ValueOthers", "Ready", '}', [this] { tokens.emplace_back(identifier::value, matched); tokens.emplace_back(identifier::bracket, "}"); });
+        add_transition("ValueEnd", "ValueEnd", cs::whitespace);
+        add_transition("ValueEnd", "Ready", ',');
+        add_transition("ValueEnd", "Ready", '}', [this] { tokens.emplace_back(identifier::bracket, "}"); });
+        set_starting("Initial");
     }
 public:
     ConfigParser(): matched(), tokens() {
         initialize();
     }
     ~ConfigParser() override {}
+    bool parse_and_get_tokens(const std::string& configs, std::vector<std::pair<identifier, std::string>>& tokens_out) noexcept {
+        reset();
+        tokens.clear();
+        try {
+            steps(configs);
+        } catch(const std::exception& e) {
+            std::cout << e.what() << std::endl;
+            return false;
+        }
+        if (!accepted()) {
+            return false;
+        }
+        tokens_out = std::move(tokens);
+        return true;
+    }
 };
 
 }

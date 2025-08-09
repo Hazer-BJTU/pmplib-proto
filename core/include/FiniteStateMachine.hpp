@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <tuple>
 #include <deque>
 #include <memory>
 #include <functional>
@@ -32,6 +33,7 @@ requires requires(std::ostream& stream, const NodeIndex& index, const Event& eve
 struct FSMNode {
     using NodePtr = FSMNode*;
     struct edge {
+        bool wait;
         NodePtr source, target;
         std::function<void()> action;
     };
@@ -44,7 +46,7 @@ struct FSMNode {
     FSMNode& operator = (const FSMNode&) = default;
     FSMNode(FSMNode&&) = default;
     FSMNode& operator = (FSMNode&&) = default;
-    NodePtr step(const Event& event) {
+    std::tuple<NodePtr, bool> step(const Event& event) {
         auto it = transition_chart.find(event);
         if (it == transition_chart.end()) {
             std::stringstream ss;
@@ -55,17 +57,23 @@ struct FSMNode {
             it->second.action();
         } PUTILS_CATCH_THROW_GENERAL
         if (it->second.target == nullptr) {
-            throw PUTILS_GENERAL_EXCEPTION("Error state encountered, parse terminated.", "FSM error");
+            #ifdef MPENGINE_FSM_IMPLICIT_OVERLOAD
+                throw PUTILS_GENERAL_EXCEPTION("Error state encountered, parse terminated.", "FSM error");
+            #else
+                std::stringstream ss;
+                ss << "Transition overloaded: " << index << " gets " << event << "!";
+                throw PUTILS_GENERAL_EXCEPTION(ss.str(), "FSM error");
+            #endif
         }
-        return it->second.target;
+        return {it->second.target, it->second.wait};
     }
     template<typename Callable>
-    void add_transition(NodePtr target, const Event& event, Callable&& action) noexcept {
+    void add_transition(NodePtr target, const Event& event, Callable&& action, bool wait = false) noexcept {
         auto it = transition_chart.find(event);
         if (it == transition_chart.end()) {
-            transition_chart.insert(std::make_pair(event, edge(this, target, std::forward<Callable>(action))));
+            transition_chart.insert(std::make_pair(event, edge(wait, this, target, std::forward<Callable>(action))));
         } else {
-            it->second = edge(this, target, std::forward<Callable>(action));
+            it->second = edge(wait, this, target, std::forward<Callable>(action));
         }
         return;
     }
@@ -217,20 +225,25 @@ public:
         }
         try {
             _current_event = event;
-            p = p->step(event);
-            return p->ending;
+            auto [p, wait] = p->step(event);
+            return wait;
         } PUTILS_CATCH_THROW_GENERAL
     }
-    bool steps(const EventList& events) {
+    void steps(const EventList& events) {
         if (!p) {
             throw PUTILS_GENERAL_EXCEPTION("Initial state is not set.", "FSM error");
         }
         try {
-            for (auto it = events.begin(); it != events.end(); it++) {
+            auto it = events.begin();
+            while(it != events.end()) {
                 _current_event = *it;
-                p = p->step(*it);
+                auto [new_p, wait] = p->step(*it);
+                p = new_p;
+                if (!wait) {
+                    it++;
+                }
             }
-            return p->ending;
+            return;
         } PUTILS_CATCH_THROW_GENERAL
     }
     const NodeIndex& get_current_state() const {
