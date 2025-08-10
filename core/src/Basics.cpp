@@ -51,4 +51,12 @@ BasicBinaryOperation::BasicBinaryOperation(): operand_A(nullptr), operand_B(null
 
 BasicBinaryOperation::~BasicBinaryOperation() {}
 
+ConstantNode::ConstantNode(bool referenced): referenced(referenced) {}
+
+ConstantNode::ConstantNode(const BasicNodeType& node, bool referenced): referenced(referenced) {
+    data = node.data;
+}
+
+ConstantNode::~ConstantNode() {}
+
 }

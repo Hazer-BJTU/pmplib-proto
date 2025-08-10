@@ -209,7 +209,7 @@ public:
 private:
     std::string matched;
     std::vector<std::pair<identifier, std::string>> tokens;
-    void initialize() noexcept {
+    void initialize() {
         const bool stop_advance = true, accepted_state = true;
         const std::string cs_value = cs::concate(cs::alphanumeric, "+-.");
         add_node("Ready");

@@ -57,28 +57,30 @@ struct FSMNode {
             it->second.action();
         } PUTILS_CATCH_THROW_GENERAL
         if (it->second.target == nullptr) {
+            throw PUTILS_GENERAL_EXCEPTION("Error state encountered, parse terminated.", "FSM error");
+        }
+        return {it->second.target, it->second.wait};
+    }
+    template<typename Callable>
+    void add_transition(NodePtr target, const Event& event, Callable&& action, bool wait = false) {
+        auto it = transition_chart.find(event);
+        if (it == transition_chart.end()) {
+            transition_chart.insert(std::make_pair(event, edge(wait, this, target, std::forward<Callable>(action))));
+        } else {
             #ifdef MPENGINE_FSM_IMPLICIT_OVERLOAD
-                throw PUTILS_GENERAL_EXCEPTION("Error state encountered, parse terminated.", "FSM error");
+                it->second = edge(wait, this, target, std::forward<Callable>(action));
             #else
                 std::stringstream ss;
                 ss << "Transition overloaded: " << index << " gets " << event << "!";
                 throw PUTILS_GENERAL_EXCEPTION(ss.str(), "FSM error");
             #endif
         }
-        return {it->second.target, it->second.wait};
-    }
-    template<typename Callable>
-    void add_transition(NodePtr target, const Event& event, Callable&& action, bool wait = false) noexcept {
-        auto it = transition_chart.find(event);
-        if (it == transition_chart.end()) {
-            transition_chart.insert(std::make_pair(event, edge(wait, this, target, std::forward<Callable>(action))));
-        } else {
-            it->second = edge(wait, this, target, std::forward<Callable>(action));
-        }
         return;
     }
-    void add_transition(NodePtr target, const Event& event) noexcept {
-        add_transition(target, event, []{});
+    void add_transition(NodePtr target, const Event& event) {
+        try {
+            add_transition(target, event, []{});
+        } PUTILS_CATCH_THROW_GENERAL
         return;
     }
 };
@@ -168,16 +170,18 @@ protected:
         return true;
     }
     template<typename... Args>
-    bool add_transition(const NodeIndex& source, const NodeIndex& target, const Event& event, Args&&... args) noexcept {
+    bool add_transition(const NodeIndex& source, const NodeIndex& target, const Event& event, Args&&... args) {
         auto it_source = nodes.find(source), it_target = nodes.find(target);
         if (it_source == nodes.end() || it_target == nodes.end()) {
             return false;
         }
-        it_source->second->add_transition(it_target->second.get(), event, std::forward<Args>(args)...);
+        try {
+            it_source->second->add_transition(it_target->second.get(), event, std::forward<Args>(args)...);
+        } PUTILS_CATCH_THROW_GENERAL
         return true;
     }
     template<typename... Args>
-    bool add_transition(const NodeIndex& source, const NodeIndex& target, const EventList& events, Args&&... args) noexcept {
+    bool add_transition(const NodeIndex& source, const NodeIndex& target, const EventList& events, Args&&... args) {
         bool flag = true;
         for (auto it = events.begin(); it != events.end(); it++) {
             auto it_source = nodes.find(source), it_target = nodes.find(target);
@@ -185,21 +189,25 @@ protected:
                 flag = false;
                 continue;
             }
-            it_source->second->add_transition(it_target->second.get(), *it, std::forward<Args>(args)...);
+            try {
+                it_source->second->add_transition(it_target->second.get(), *it, std::forward<Args>(args)...);
+            } PUTILS_CATCH_THROW_GENERAL
         }
         return flag;
     }
     template<typename... Args>
-    bool add_error_transition(const NodeIndex& source, const Event& event, Args&&... args) noexcept {
+    bool add_error_transition(const NodeIndex& source, const Event& event, Args&&... args) {
         auto it_source = nodes.find(source);
         if (it_source == nodes.end()) {
             return false;
         }
-        it_source->second->add_transition(nullptr, event, std::forward<Args>(args)...);
+        try {
+            it_source->second->add_transition(nullptr, event, std::forward<Args>(args)...);
+        } PUTILS_CATCH_THROW_GENERAL
         return true;
     }
     template<typename... Args>
-    bool add_error_transition(const NodeIndex& source, const EventList& events, Args&&... args) noexcept {
+    bool add_error_transition(const NodeIndex& source, const EventList& events, Args&&... args) {
         bool flag = true;
         for (auto it = events.begin(); it != events.end(); it++) {
             auto it_source = nodes.find(source);
@@ -207,7 +215,9 @@ protected:
                 flag = false;
                 continue;
             }
-            it_source->second->add_transition(nullptr, *it, std::forward<Args>(args)...);
+            try {
+                it_source->second->add_transition(nullptr, *it, std::forward<Args>(args)...);
+            } PUTILS_CATCH_THROW_GENERAL
         }
         return flag;
     }

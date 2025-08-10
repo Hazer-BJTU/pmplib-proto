@@ -1,5 +1,6 @@
 #pragma once
 
+#include "FiniteStateMachine.hpp"
 #include "MemoryAllocator.h"
 #include "GlobalConfig.h"
 #include "RuntimeLog.h"
@@ -36,6 +37,18 @@ struct BasicBinaryOperation: public BasicNodeType {
     NodePtr operand_A, operand_B;
     BasicBinaryOperation();
     ~BasicBinaryOperation() override;
+};
+
+struct ConstantNode: public BasicNodeType {
+    bool referenced;
+    ConstantNode(bool referenced = false);
+    ConstantNode(const BasicNodeType& node, bool referenced = false);
+    ~ConstantNode() override;
+};
+
+class IntegerParser: public Automaton {
+private:
+public:
 };
 
 }
