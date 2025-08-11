@@ -233,7 +233,7 @@ void GlobalConfig::export_all(const std::string& input_filepath) const noexcept 
 }
 
 void GlobalConfig::parse_and_set(const std::string& config_str) {
-    ConfigParser config_parser;
+    static ConfigParser config_parser;
     std::vector<std::pair<ConfigParser::identifier, std::string>> tokens;
     bool successful = config_parser.parse_and_get_tokens(config_str, tokens);
     if (!successful) {
