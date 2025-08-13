@@ -65,6 +65,7 @@ struct ParallelizableUnit: public BasicComputeUnitType {
                 putils::ThreadPool::get_global_threadpool().submit(task_list);
             }
         } PUTILS_CATCH_THROW_GENERAL
+        return;
     }
     void forward() override {
         if (forward_synchronizer.fetch_sub(1, std::memory_order_acq_rel) == 1) {
@@ -74,17 +75,20 @@ struct ParallelizableUnit: public BasicComputeUnitType {
                 } PUTILS_CATCH_THROW_GENERAL
             }
         }
+        return;
     }
     void add_dependency(BasicComputeUnitType& predecessor) override {
         try {
             predecessor.forward_calls.emplace_back([this] { try { dependency_notice(); } PUTILS_CATCH_THROW_GENERAL });
             dependency_synchronizer.increment();
         } PUTILS_CATCH_THROW_GENERAL
+        return;
     }
     template<typename Callable>
     void add_task_from_outer(Callable&& callable) noexcept {
         task_list.emplace_back(putils::wrap_task([callable, this] { callable(); forward(); }));
         forward_synchronizer.fetch_add(1, std::memory_order_acq_rel);
+        return;
     }
 };
 
@@ -107,9 +111,14 @@ struct MonoUnit: public BasicComputeUnitType {
     void dependency_notice() override {
         try {
             if (dependency_synchronizer.ready()) {
-                task->run();
+                #ifdef MPENGINE_THREAD_BINDING_OPTIMIZATION
+                    task->run();
+                #else
+                    putils::ThreadPool::get_global_threadpool().submit(task);
+                #endif
             }
         } PUTILS_CATCH_THROW_GENERAL
+        return;
     }
     void forward() override {
         for (auto& forward_call: forward_calls) {
@@ -117,12 +126,14 @@ struct MonoUnit: public BasicComputeUnitType {
                 forward_call();
             } PUTILS_CATCH_THROW_GENERAL
         }
+        return;
     }
     void add_dependency(BasicComputeUnitType& predecessor) override {
         try {
             predecessor.forward_calls.emplace_back([this] { try { dependency_notice(); } PUTILS_CATCH_THROW_GENERAL });
             dependency_synchronizer.increment();
         } PUTILS_CATCH_THROW_GENERAL
+        return;
     }
     template<typename Callable>
     void add_task_from_outer(Callable&& callable) {
@@ -131,6 +142,7 @@ struct MonoUnit: public BasicComputeUnitType {
         } else {
             throw PUTILS_GENERAL_EXCEPTION("Single task unit has duplicate task initialization!", "compute unit error");
         }
+        return;
     }
 };
 
@@ -144,12 +156,14 @@ struct MultiTaskSynchronizer {
     std::atomic<size_t> synchronizer;
     void initialize_as_zero() noexcept {
         synchronizer.store(0, std::memory_order_release);
+        return;
     }
     bool ready() noexcept {
         return synchronizer.fetch_sub(1, std::memory_order_acq_rel) == 1;
     }
     void increment() noexcept {
         synchronizer.fetch_add(1, std::memory_order_acq_rel);
+        return;
     }
 };
 
@@ -157,6 +171,7 @@ struct MonoSynchronizer {
     bool flag;
     void initialize_as_zero() noexcept {
         flag = false;
+        return;
     }
     constexpr bool ready() const noexcept {
         return true;
@@ -165,17 +180,12 @@ struct MonoSynchronizer {
         if (flag) {
             throw PUTILS_GENERAL_EXCEPTION("Single dependency unit has duplicate dependency initialization!", "compute unit error");
         }
+        flag = true;
+        return;
     }
 };
 
-struct LatchSynchronizer {
-    std::latch synchronizer;
-    void add_dependency(BasicComputeUnitType& predecessor) {
-        try {
-            predecessor.forward_calls.emplace_back([this] { synchronizer.count_down(); });
-        } PUTILS_CATCH_THROW_GENERAL
-    }
-};
+void add_dependency(std::latch& synchronizer, BasicComputeUnitType& predecessor);
 
 struct BasicNodeType {
     using DataPtr = std::shared_ptr<BasicIntegerType>;

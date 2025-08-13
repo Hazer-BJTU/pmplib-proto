@@ -19,15 +19,16 @@ int main() {
     unit_5->add_task_from_outer([&logger] { logger.add("unit_5"); });
     auto unit_6 = mpengine::make_mono<mpengine::MonoSynchronizer>();
     unit_6->add_task_from_outer([&logger] { logger.add("unit_6"); });
-    mpengine::LatchSynchronizer latch{std::latch{1}};
+    std::latch final_synchronizer{1};
     unit_1->add_dependency(*unit_0);
     unit_2->add_dependency(*unit_1);
     unit_3->add_dependency(*unit_2);
     unit_4->add_dependency(*unit_3);
     unit_5->add_dependency(*unit_4);
     unit_6->add_dependency(*unit_5);
-    latch.add_dependency(*unit_6);
+    std::latch synchronizer{1};
+    mpengine::add_dependency(synchronizer, *unit_6);
     unit_0->dependency_notice();
-    latch.synchronizer.wait();
+    synchronizer.wait();
     return 0;
 }
