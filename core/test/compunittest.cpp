@@ -1,6 +1,7 @@
 #include "Basics.h"
 
 int main() {
+    putils::ThreadPool::set_global_threadpool();
     auto& logger = putils::RuntimeLog::get_global_log();
     auto unit_0 = mpengine::make_mono<mpengine::MonoSynchronizer>();
     unit_0->add_task_from_outer([&logger] { logger.add("unit_0"); });

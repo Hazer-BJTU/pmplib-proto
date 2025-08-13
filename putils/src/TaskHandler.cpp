@@ -43,19 +43,23 @@ workers(), active_workers(num_workers), cv_lock(), cv_inactive(), cv_all_done(),
                             }
                             active_workers.fetch_add(1, std::memory_order_acq_rel);
                         } else {
-                            // Performs work stealing to fetch tasks from other queues.
-                            task_ptr = ThreadPool::get_global_threadpool().work_stealing();
-                            if (task_ptr) {
-                                try {
-                                    task_ptr->run();
-                                } PUTILS_CATCH_LOG_GENERAL_MSG(
-                                    "(Worker): Task loss due to runtime errors.",
-                                    RuntimeLog::Level::WARN
-                                )
-                            } else {
-                                // Steal failed, yield the time slice.
+                            #ifdef PUTILS_THREADPOOL_WORKSTEALING_OPTIMIZATION
+                                // Performs work stealing to fetch tasks from other queues.
+                                task_ptr = ThreadPool::get_global_threadpool().work_stealing();
+                                if (task_ptr) {
+                                    try {
+                                        task_ptr->run();
+                                    } PUTILS_CATCH_LOG_GENERAL_MSG(
+                                        "(Worker): Task loss due to runtime errors.",
+                                        RuntimeLog::Level::WARN
+                                    )
+                                } else {
+                                    // Steal failed, yield the time slice.
+                                    std::this_thread::yield();
+                                }
+                            #else
                                 std::this_thread::yield();
-                            }
+                            #endif
                         }
                     }
                 }

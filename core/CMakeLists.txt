@@ -21,11 +21,9 @@ if (ENABLE_MPENGINE_THREAD_BINDING_OPTIMIZATION)
     list(APPEND MPENGINE_ENABLED_MACROS MPENGINE_THREAD_BINDING_OPTIMIZATION)
 endif()
 
-MESSAGE(STATUS ${MPENGINE_ENABLED_MACROS})
-
 add_library(core SHARED ${SOURCES})
 set_target_properties(core PROPERTIES PREFIX "${PROJECT_NAME}_")
-target_compile_definitions(core PRIVATE ${MPENGINE_ENABLED_MACROS})
+target_compile_definitions(core PUBLIC ${MPENGINE_ENABLED_MACROS})
 target_link_libraries(core PUBLIC putils) 
 target_link_options(core PRIVATE ${COMPILER_OPTION_FLAGS})
 
