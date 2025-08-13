@@ -39,11 +39,17 @@ BasicIntegerType::ElementType* BasicIntegerType::get_pointer() const noexcept {
     return data->get<ElementType>();
 }
 
-BasicProcedureType::BasicProcedureType() {}
+BasicComputeUnitType::BasicComputeUnitType(): forward_calls() {}
 
-BasicProcedureType::~BasicProcedureType() {}
+BasicComputeUnitType::~BasicComputeUnitType() {}
 
-BasicNodeType::BasicNodeType(): data(nullptr), proc(nullptr), next(nullptr) {}
+void BasicComputeUnitType::dependency_notice() {}
+
+void BasicComputeUnitType::forward() {}
+
+void BasicComputeUnitType::add_dependency(BasicComputeUnitType& predecessor) {}
+
+BasicNodeType::BasicNodeType(): data(nullptr), next(nullptr), procedure() {}
 
 BasicNodeType::~BasicNodeType() {}
 
