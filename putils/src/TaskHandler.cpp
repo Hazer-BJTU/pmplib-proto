@@ -114,7 +114,7 @@ ThreadPool::ThreadPool(): executors() {
     }
 }
 
-ThreadPool::~ThreadPool() {}
+ThreadPool::~ThreadPool() { shutdown(); }
 
 size_t ThreadPool::get_executor_id() noexcept {
     thread_local std::mt19937 gen(seed_generator());

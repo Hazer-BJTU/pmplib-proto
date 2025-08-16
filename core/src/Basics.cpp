@@ -49,13 +49,6 @@ void BasicComputeUnitType::forward() {}
 
 void BasicComputeUnitType::add_dependency(BasicComputeUnitType& predecessor) {}
 
-void add_dependency(std::latch& synchronizer, BasicComputeUnitType& predecessor) {
-    try {
-        predecessor.forward_calls.emplace_back([&synchronizer] { synchronizer.count_down(); });
-    } PUTILS_CATCH_THROW_GENERAL
-    return;
-}
-
 BasicNodeType::BasicNodeType(): data(nullptr), next(nullptr), procedure() {}
 
 BasicNodeType::~BasicNodeType() {}

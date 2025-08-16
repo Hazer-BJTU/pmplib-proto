@@ -12,6 +12,36 @@
 
 namespace mpengine {
 
+/**
+ * @class BasicIntegerType
+ * @brief A high-precision integer type that stores data in large base for efficiency.
+ *
+ * This class implements a variable-length integer type that:
+ * - Uses a large base (100000000) for efficient storage
+ * - Dynamically allocates memory from a global memory pool
+ * - Automatically manages memory lifecycle
+ * - Provides direct pointer access for high performance
+ * - Enforces configurable length boundaries
+ *
+ * @tparam ElementType The underlying storage type (uint64_t)
+ * @tparam BlockHandle Memory pool block handle type
+ *
+ * @note Memory Management:
+ * - Uses putils::MemoryPool for efficient allocation
+ * - Memory pool uses chunked design with length-based indexing
+ * - Automatically releases memory in destructor
+ * - Provides direct pointer access via get_pointer()
+ *
+ * @throw PUTILS_GENERAL_EXCEPTION
+ *       Throws if configuration values are invalid
+ * @throw Various memory allocation exceptions
+ *
+ * @warning Direct pointer access requires careful usage to avoid memory issues
+ * 
+ * @author Hazer
+ * @date 2025/8/15
+ */
+
 struct BasicIntegerType {
     using ElementType = uint64_t;
     using BlockHandle = putils::MemoryPool::BlockHandle;
@@ -25,6 +55,28 @@ struct BasicIntegerType {
     virtual ~BasicIntegerType();
     ElementType* get_pointer() const noexcept;
 };
+
+/**
+ * @class BasicComputeUnitType
+ * @brief Base class for DAG-based multi-threaded task scheduling units.
+ *
+ * This class provides the fundamental infrastructure for creating directed acyclic graphs (DAGs)
+ * of computational tasks with dependency tracking. The scheduling flow follows:
+ * 1. dependency_notice() is called when predecessors complete
+ * 2. Checks if all dependencies are satisfied
+ * 3. If ready, executes the unit's tasks
+ * 4. Calls forward() to propagate completion to successor nodes
+ *
+ * @note The class is designed for inheritance with two concrete implementations provided:
+ *       - ParallelizableUnit (for parallel task groups)
+ *       - MonoUnit (for single tasks)
+ *
+ * @var forward_calls
+ *      Collection of functions to notify dependent units
+ *
+ * @warning Not thread-safe for concurrent modification. Dependencies should be established
+ *          during graph construction phase before execution begins.
+ */
 
 struct BasicComputeUnitType {
     using FuncList = std::vector<std::function<void()>>;
@@ -47,6 +99,29 @@ requires(DependencySynchronizerType dependency_synchronizer) {
     { dependency_synchronizer.increment() };
     { dependency_synchronizer.ready() } -> std::convertible_to<bool>;
 };
+
+/**
+ * @class ParallelizableUnit
+ * @brief Compute unit that manages a group of parallelizable tasks.
+ *
+ * This implementation:
+ * - Manages multiple tasks through a ThreadPool::TaskList
+ * - Uses atomic counters for synchronization
+ * - Provides non-blocking execution
+ * - Supports arbitrary dependency counts
+ *
+ * @tparam DependencySynchronizerType Synchronization policy (must satisfy ValidDependencySynchronizer)
+ *
+ * @var task_list
+ *      Collection of tasks to execute when dependencies are satisfied
+ * @var forward_synchronizer
+ *      Atomic counter for coordinating task completion
+ * @var dependency_synchronizer
+ *      Policy-based dependency tracking component
+ *
+ * @note The forward() implementation uses atomic operations to ensure proper
+ *       sequencing of successor notifications after all tasks complete.
+ */
 
 template<typename DependencySynchronizerType>
 requires ValidDependencySynchronizer<DependencySynchronizerType>
@@ -92,11 +167,25 @@ struct ParallelizableUnit: public BasicComputeUnitType {
     }
 };
 
-template<typename DependencySynchronizerType>
-requires ValidDependencySynchronizer<DependencySynchronizerType>
-inline std::unique_ptr<ParallelizableUnit<DependencySynchronizerType>> make_parallelizable() {
-    return std::make_unique<ParallelizableUnit<DependencySynchronizerType>>();
-}
+/**
+ * @class MonoUnit
+ * @brief Compute unit optimized for single-task execution.
+ *
+ * This implementation:
+ * - Manages exactly one task
+ * - Supports thread-binding optimization (MPENGINE_THREAD_BINDING_OPTIMIZATION)
+ * - Reduces synchronization overhead
+ *
+ * @tparam DependencySynchronizerType Synchronization policy (must satisfy ValidDependencySynchronizer)
+ *
+ * @var task
+ *      The single task to execute
+ * @var dependency_synchronizer
+ *      Policy-based dependency tracking component
+ *
+ * @warning When MPENGINE_THREAD_BINDING_OPTIMIZATION is enabled, tasks execute
+ *          directly on the calling thread which may increase call stack pressure.
+ */
 
 template<typename DependencySynchronizerType> 
 requires ValidDependencySynchronizer<DependencySynchronizerType>
@@ -146,12 +235,6 @@ struct MonoUnit: public BasicComputeUnitType {
     }
 };
 
-template<typename DependencySynchronizerType>
-requires ValidDependencySynchronizer<DependencySynchronizerType>
-inline std::unique_ptr<MonoUnit<DependencySynchronizerType>> make_mono() {
-    return std::make_unique<MonoUnit<DependencySynchronizerType>>();
-}
-
 struct MultiTaskSynchronizer {
     std::atomic<size_t> synchronizer;
     void initialize_as_zero() noexcept {
@@ -185,7 +268,46 @@ struct MonoSynchronizer {
     }
 };
 
-void add_dependency(std::latch& synchronizer, BasicComputeUnitType& predecessor);
+template<typename FinalSynchronizer = std::latch>
+void add_dependency(FinalSynchronizer& synchronizer, BasicComputeUnitType& predecessor) noexcept {
+    predecessor.forward_calls.emplace_back([&synchronizer] { synchronizer.count_down(); });
+    return;
+}
+
+/**
+ * @class BasicNodeType
+ * @brief Fundamental computational node type managing data, dependencies, and execution flow.
+ *
+ * This class serves as a building block for constructing computational graphs with:
+ * - Managed data storage (BasicIntegerType)
+ * - Explicit dependency chaining (next pointer)
+ * - Ordered sequence of computational units (Procedure)
+ *
+ * @note Key Features:
+ * - Supports dynamic creation of both data and computation procedures
+ * - Designed for serialization/deserialization to enable:
+ *   * Persistent storage
+ *   * Distributed computation
+ *   * Checkpointing
+ * - Default copy/move operations maintain structural integrity
+ *
+ * @typedef DataPtr
+ *        Shared pointer to managed data (BasicIntegerType)
+ * @typedef NodePtr
+ *        Raw pointer for lightweight dependency chaining
+ * @typedef Procedure
+ *        Sequence of owned computational units (BasicComputeUnitType)
+ *
+ * @var data
+ *      Managed high-precision numerical data
+ * @var next
+ *      Pointer to dependent node in computational graph
+ * @var procedure
+ *      Ordered collection of computational units to execute
+ *
+ * @warning NodePtr uses raw pointers - lifetime must be managed externally
+ * @warning Procedure units are executed in list order - sequence matters
+ */
 
 struct BasicNodeType {
     using DataPtr = std::shared_ptr<BasicIntegerType>;
