@@ -28,6 +28,7 @@ BasicIntegerType::BasicIntegerType(size_t log_len): sign(1), log_len(log_len), l
     len = 1ull << log_len;
     try {
         data = memorypool.allocate(len * sizeof(ElementType));
+        memset(data->get<ElementType>(), 0, len * sizeof(ElementType));
     } PUTILS_CATCH_THROW_GENERAL
 }
 
@@ -52,6 +53,8 @@ void BasicComputeUnitType::add_dependency(BasicComputeUnitType& predecessor) {}
 BasicNodeType::BasicNodeType(): data(nullptr), next(nullptr), procedure() {}
 
 BasicNodeType::~BasicNodeType() {}
+
+void BasicNodeType::generate_procedure() noexcept {}
 
 BasicTransformation::BasicTransformation(): operand(nullptr) {}
 
@@ -109,6 +112,7 @@ void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& da
             throw PUTILS_GENERAL_EXCEPTION("Length limit exceeded.", "parse error");
         }
     }
+    return;
 }
 
 std::string parse_integer_to_string(const BasicIntegerType& data) noexcept {
@@ -120,11 +124,11 @@ std::string parse_integer_to_string(const BasicIntegerType& data) noexcept {
     }
     bool none_zero = false;
     for (int i = len - 1; i >= 0; i--) {
-        if (arr[i] != 0ull) {
+        if (arr[i] != 0ull && !none_zero) {
             none_zero = true;
-        }
-        if (none_zero) {
             ss << arr[i];
+        } else if (none_zero) {
+            ss << std::setw(BasicIntegerType::LOG_BASE) << std::setfill('0') << arr[i];
         }
     }
     if (!none_zero) {

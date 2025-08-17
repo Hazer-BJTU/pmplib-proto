@@ -2,6 +2,7 @@
 
 #include <list>
 #include <latch>
+#include <iomanip>
 #include <string.h>
 
 #include "FiniteStateMachine.hpp"
@@ -322,6 +323,7 @@ struct BasicNodeType {
     BasicNodeType& operator = (const BasicNodeType&) = default;
     BasicNodeType(BasicNodeType&&) = default;
     BasicNodeType& operator = (BasicNodeType&&) = default;
+    virtual void generate_procedure() noexcept;
 };
 
 struct BasicTransformation: public BasicNodeType {

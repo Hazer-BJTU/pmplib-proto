@@ -10,8 +10,7 @@
 
 namespace putils {
 
-class Task {
-public:
+struct Task {
     Task();
     virtual ~Task() = 0;
     Task(const Task&) = default;
