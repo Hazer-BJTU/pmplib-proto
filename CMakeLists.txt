@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(RPC-1K VERSION 0.1)
+project(pmplib VERSION 0.1)
 
 include(CheckCXXCompilerFlag)
 

@@ -1,2 +1,2 @@
-# RPC-1K
-Real number CPU parallel computing for C++.
+# pmplib-proto
+Parallel-computing Multiple Precision Library

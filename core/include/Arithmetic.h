@@ -24,7 +24,9 @@ private:
         void run() override;
     };
 public:
-    
+    ArithmeticAddNodeForInteger(BasicNodeType& node_A, BasicNodeType& node_B);
+    ~ArithmeticAddNodeForInteger() override = default;
+    void generate_procedure() override;
 };
 
 }

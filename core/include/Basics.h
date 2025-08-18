@@ -313,9 +313,10 @@ void add_dependency(FinalSynchronizer& synchronizer, BasicComputeUnitType& prede
 struct BasicNodeType {
     using DataPtr = std::shared_ptr<BasicIntegerType>;
     using NodePtr = BasicNodeType*;
+    using NodePtrList = std::vector<NodePtr>;
     using Procedure = std::list<std::unique_ptr<BasicComputeUnitType>>;
     DataPtr data;
-    NodePtr next;
+    NodePtrList nexts;
     Procedure procedure;
     BasicNodeType();
     virtual ~BasicNodeType();
@@ -323,7 +324,8 @@ struct BasicNodeType {
     BasicNodeType& operator = (const BasicNodeType&) = default;
     BasicNodeType(BasicNodeType&&) = default;
     BasicNodeType& operator = (BasicNodeType&&) = default;
-    virtual void generate_procedure() noexcept;
+    virtual void generate_procedure();
+    virtual BasicComputeUnitType& get_procedure_port();
 };
 
 struct BasicTransformation: public BasicNodeType {
@@ -343,6 +345,7 @@ struct ConstantNode: public BasicNodeType {
     ConstantNode(bool referenced = false);
     ConstantNode(const BasicNodeType& node, bool referenced = false);
     ~ConstantNode() override;
+    void generate_procedure() override;
 };
 
 void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& data);

@@ -50,11 +50,18 @@ void BasicComputeUnitType::forward() {}
 
 void BasicComputeUnitType::add_dependency(BasicComputeUnitType& predecessor) {}
 
-BasicNodeType::BasicNodeType(): data(nullptr), next(nullptr), procedure() {}
+BasicNodeType::BasicNodeType(): data(nullptr), nexts(), procedure() {}
 
 BasicNodeType::~BasicNodeType() {}
 
-void BasicNodeType::generate_procedure() noexcept {}
+void BasicNodeType::generate_procedure() {}
+
+BasicComputeUnitType& BasicNodeType::get_procedure_port() {
+    if (procedure.empty()) {
+        throw PUTILS_GENERAL_EXCEPTION("Node procedure is not initialized.", "DAG construction error");
+    }
+    return *(procedure.back());
+}
 
 BasicTransformation::BasicTransformation(): operand(nullptr) {}
 
@@ -71,6 +78,14 @@ ConstantNode::ConstantNode(const BasicNodeType& node, bool referenced): referenc
 }
 
 ConstantNode::~ConstantNode() {}
+
+void ConstantNode::generate_procedure() {
+    if (data == nullptr) {
+        throw PUTILS_GENERAL_EXCEPTION("Constant node with empty data domain.", "DAG construction error");
+    }
+    procedure.emplace_back(std::make_unique<BasicComputeUnitType>());
+    return;
+}
 
 void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& data) {
     if (integer_view.empty()) {
