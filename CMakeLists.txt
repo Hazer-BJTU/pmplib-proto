@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(pmplib VERSION 0.1)
+project(pmplib VERSION 0.1 LANGUAGES CXX CUDA)
 
 include(CheckCXXCompilerFlag)
 
@@ -19,6 +19,14 @@ endif()
 message(STATUS "[Global]- Global option flags used: ${COMPILER_OPTION_FLAGS}")
 add_compile_options(${COMPILER_OPTION_FLAGS})
 
+if(CMAKE_CUDA_COMPILER)
+    find_package(CUDAToolkit REQUIRED)
+    message(STATUS "[Global]- CUDA compiler online.")
+else()
+    message(STATUS "[GLobal]- CUDA compiler offline.]")
+endif()
+
+
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
 
@@ -29,3 +37,4 @@ include_directories(
 
 add_subdirectory(putils)
 add_subdirectory(core)
+add_subdirectory(cupmp)
