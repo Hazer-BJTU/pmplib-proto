@@ -11,8 +11,8 @@ add_compile_definition_option(MPENGINE MPENGINE_THREAD_BINDING_OPTIMIZATION ON)
 add_library(core SHARED ${SOURCES})
 set_target_properties(core PROPERTIES PREFIX "${PROJECT_NAME}_")
 target_compile_definitions(core PUBLIC ${MPENGINE_ENABLED_MACROS})
+target_compile_options(core PUBLIC ${CXX_COMPILER_OPTION_FLAGS})
 target_link_libraries(core PUBLIC putils) 
-target_link_options(core PRIVATE ${CXX_COMPILER_OPTION_FLAGS})
 
 message(STATUS "<core>- Start checking macros for core.")
 foreach (macro ${MPENGINE_MACROS})
@@ -31,7 +31,7 @@ if(GENERATE_TEST_TARGETS)
     foreach (test_source_file ${TESTS})
         get_filename_component(executable_name ${test_source_file} NAME_WE)
         add_executable(${executable_name} ${test_source_file})
-        target_link_options(${executable_name} PRIVATE ${CXX_COMPILER_OPTION_FLAGS})
+        target_compile_options(${executable_name} PRIVATE ${CXX_COMPILER_OPTION_FLAGS})
         target_link_libraries(${executable_name} core)
         set_target_properties(
             ${executable_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY 
@@ -46,7 +46,7 @@ message(STATUS "<core>- Start post-compile operations for core.")
 message(STATUS "<core>- core post-compile operations flags used: ${CXX_COMPILER_OPTION_FLAGS}")
 
 add_executable(print_default_configs "post/printdefaultconfigs.cpp")
-target_link_options(print_default_configs PRIVATE ${CXX_COMPILER_OPTION_FLAGS})
+target_compile_options(print_default_configs PRIVATE ${CXX_COMPILER_OPTION_FLAGS})
 target_link_libraries(print_default_configs core)
 set_target_properties(
     print_default_configs PROPERTIES RUNTIME_OUTPUT_DIRECTORY

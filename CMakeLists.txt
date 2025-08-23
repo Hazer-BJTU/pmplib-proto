@@ -15,8 +15,8 @@ else()
     set(CXX_COMPILER_OPTION_FLAGS "-g" "-rdynamic" "-O3")
 endif()
 
-message(STATUS "[Global]- Global option flags used: ${COMPILER_OPTION_FLAGS}")
-add_compile_options(${COMPILER_OPTION_FLAGS})
+message(STATUS "[Global]- Global option flags used: ${CXX_COMPILER_OPTION_FLAGS}")
+add_compile_options(${CXX_COMPILER_OPTION_FLAGS})
 
 if(CMAKE_CUDA_COMPILER AND USE_CUPMP)
     message(STATUS "[Global]- CUDA compiler online.")
@@ -25,12 +25,9 @@ if(CMAKE_CUDA_COMPILER AND USE_CUPMP)
     find_package(CUDAToolkit REQUIRED)
     set(CUDA_ONLINE ON)
 else()
-    message(STATUS "[GLobal]- CUDA compiler offline.]")
+    message(STATUS "[GLobal]- CUDA compiler offline.")
     set(CUDA_ONLINE OFF)
 endif()
-
-message(STATUS "CUDA online: ${CUDA_ONLINE}")
-
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")

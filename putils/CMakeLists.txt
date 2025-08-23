@@ -11,7 +11,7 @@ add_compile_definition_option(PUTILS PUTILS_THREADPOOL_WORKSTEALING_OPTIMIZATION
 add_library(putils SHARED ${SOURCES})
 set_target_properties(putils PROPERTIES PREFIX "${PROJECT_NAME}_") 
 target_compile_definitions(putils PUBLIC ${PUTILS_ENABLED_MACROS})
-target_link_options(putils PUBLIC ${CXX_COMPILER_OPTION_FLAGS})
+target_compile_options(putils PUBLIC ${CXX_COMPILER_OPTION_FLAGS})
 
 message(STATUS "<putils>- Start checking macros for putils.")
 foreach (macro ${PUTILS_MACROS})
@@ -30,7 +30,7 @@ if(GENERATE_TEST_TARGETS)
     foreach (test_source_file ${TESTS})
         get_filename_component(executable_name ${test_source_file} NAME_WE)
         add_executable(${executable_name} ${test_source_file})
-        target_link_options(${executable_name} PRIVATE ${CXX_COMPILER_OPTION_FLAGS})
+        target_compile_options(${executable_name} PRIVATE ${CXX_COMPILER_OPTION_FLAGS})
         target_link_libraries(${executable_name} putils)
         set_target_properties(
             ${executable_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY 
