@@ -7,6 +7,7 @@ touch lib/.lib
 rm -rf config/*
 touch config/.config
 cmake -B build \
+-DUSE_CUPMP=ON \
 -DGENERATE_TEST_TARGETS=ON \
 -DBUILD_RELEASE=OFF \
 -DENABLE_PUTILS_GENERAL_EXCEPTION_KNOWN_ONLY=ON \
