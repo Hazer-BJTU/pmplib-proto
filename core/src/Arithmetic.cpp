@@ -15,22 +15,29 @@ ArithmeticAddNodeForInteger::ArithmeticAddTaskForInteger::ArithmeticAddTaskForIn
 void ArithmeticAddNodeForInteger::ArithmeticAddTaskForInteger::run() {
     bool flag = false;
     if (sign_A == sign_B) {
+        //For integers with the same sign, simply add their absolute values directly.
         flag |= u64_variable_length_integer_addition_with_carry<BasicIntegerType::BASE>(source_A, source_B, target_C, length);
         sign_C = sign_A;
     } else {
         int comp_result = u64_variable_length_integer_compare(source_A, source_B, length);
         if (comp_result > 0) {
+            // |A| > |B| : |C| = |A| - |B|
             flag |= u64_variable_length_integer_subtraction_with_carry_a_ge_b<BasicIntegerType::BASE>(source_A, source_B, target_C, length);
             if (sign_A == 0 && sign_B == 1) {
+                // C = A + B = B - (-A) = |B| - |A| = -(|A| - |B|)
                 sign_C = 0;
             } else if (sign_A == 1 && sign_B == 0) {
+                // C = A + B = A - (-B) = |A| - |B|
                 sign_C = 1;
             }
         } else if (comp_result < 0) {
+            // |A| < |B| : |C| = |B| - |A|
             flag |= u64_variable_length_integer_subtraction_with_carry_a_ge_b<BasicIntegerType::BASE>(source_B, source_A, target_C, length);
             if (sign_A == 0 && sign_B == 1) {
+                // C = A + B = B - (-A) = |B| - |A|
                 sign_C = 1;
             } else if (sign_A == 1 && sign_B == 0) {
+                // C = A + B = A - (-B) = |A| - |B| = -(|B| - |A|)
                 sign_C = 0;
             }
         } else if (comp_result == 0) {
