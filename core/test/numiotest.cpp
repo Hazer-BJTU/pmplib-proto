@@ -2,7 +2,9 @@
 
 int main() {
     mpengine::BasicIntegerType X(10);
-    mpengine::parse_string_to_integer("-0", X);
-    std::cout << mpengine::parse_integer_to_string(X) << std::endl;
+    std::ostringstream oss;
+    mpengine::parse_string_to_integer("-0123409859123784987216349182730501293834928348", X);
+    mpengine::parse_integer_to_stream(oss, X);
+    std::cout << oss.str() << std::endl;
     return 0;
 }

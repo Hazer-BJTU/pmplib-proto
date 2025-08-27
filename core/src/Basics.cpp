@@ -71,10 +71,25 @@ BasicBinaryOperation::BasicBinaryOperation(): operand_A(nullptr), operand_B(null
 
 BasicBinaryOperation::~BasicBinaryOperation() {}
 
+/*
 ConstantNode::ConstantNode(bool referenced): referenced(referenced) {}
 
 ConstantNode::ConstantNode(const BasicNodeType& node, bool referenced): referenced(referenced) {
     data = node.data;
+}
+*/
+
+ConstantNode::ConstantNode(size_t precision_digits) {
+    size_t len_required = (precision_digits + BasicIntegerType::LOG_BASE - 1) / BasicIntegerType::LOG_BASE;
+    size_t log_len = std::countr_zero(std::bit_ceil(len_required));
+    data = std::make_shared<BasicIntegerType>(log_len);
+}
+
+ConstantNode::ConstantNode(const BasicNodeType& node) {
+    data = node.data;
+    if (data == nullptr) {
+        throw PUTILS_GENERAL_EXCEPTION("Attempt to construct constant node using node with empty data domain.", "DAG construction error");
+    }
 }
 
 ConstantNode::~ConstantNode() {}
@@ -111,7 +126,7 @@ void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& da
             throw PUTILS_GENERAL_EXCEPTION(ss.str(), "parse error");
         }
         element = element + power * (integer_str[i] - '0');
-        power *= BasicIntegerType::BB;
+        power *= BasicIntegerType::READ_BASE;
         if (power == BasicIntegerType::BASE) {
             if (p >= len) {
                 throw PUTILS_GENERAL_EXCEPTION("Length limit exceeded.", "parse error");
@@ -130,26 +145,26 @@ void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& da
     return;
 }
 
-std::string parse_integer_to_string(const BasicIntegerType& data) noexcept {
-    std::stringstream ss;
+std::ostream& parse_integer_to_stream(std::ostream& stream, const BasicIntegerType& data) noexcept {
     size_t len = data.len;
     BasicIntegerType::ElementType* arr = data.get_pointer();
     if (data.sign == false) {
-        ss << '-';
+        stream << '-';
     }
     bool none_zero = false;
     for (int i = len - 1; i >= 0; i--) {
         if (arr[i] != 0ull && !none_zero) {
             none_zero = true;
-            ss << arr[i];
+            stream << arr[i];
         } else if (none_zero) {
-            ss << std::setw(BasicIntegerType::LOG_BASE) << std::setfill('0') << arr[i];
+            stream << std::setw(BasicIntegerType::LOG_BASE) << std::setfill('0') << arr[i];
         }
     }
     if (!none_zero) {
-        return "0";
+        stream << '0';
+        return stream;
     }
-    return ss.str();
+    return stream;
 }
 
 }

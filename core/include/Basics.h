@@ -47,7 +47,7 @@ struct BasicIntegerType {
     using ElementType = uint64_t;
     using BlockHandle = putils::MemoryPool::BlockHandle;
     static constexpr ElementType BASE = 100000000ull;
-    static constexpr ElementType BB = 10ull;
+    static constexpr ElementType READ_BASE = 10ull;
     static constexpr size_t LOG_BASE = 8;
     bool sign;
     size_t log_len, len;
@@ -341,14 +341,16 @@ struct BasicBinaryOperation: public BasicNodeType {
 };
 
 struct ConstantNode: public BasicNodeType {
-    bool referenced;
-    ConstantNode(bool referenced = false);
-    ConstantNode(const BasicNodeType& node, bool referenced = false);
+    //bool referenced;
+    //ConstantNode(bool referenced = false);
+    //ConstantNode(const BasicNodeType& node, bool referenced = false);
+    ConstantNode(size_t precision_digits);
+    ConstantNode(const BasicNodeType& node);
     ~ConstantNode() override;
     void generate_procedure() override;
 };
 
 void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& data);
-std::string parse_integer_to_string(const BasicIntegerType& data) noexcept;
+std::ostream& parse_integer_to_stream(std::ostream& stream, const BasicIntegerType& data) noexcept;
 
 }
