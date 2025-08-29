@@ -10,6 +10,7 @@
 #include "GlobalConfig.h"
 #include "RuntimeLog.h"
 #include "TaskHandler.h"
+#include "IOBasic.h"
 
 namespace mpengine {
 
@@ -46,13 +47,16 @@ namespace mpengine {
 struct BasicIntegerType {
     using ElementType = uint64_t;
     using BlockHandle = putils::MemoryPool::BlockHandle;
+    /*
     static constexpr ElementType BASE = 100000000ull;
     static constexpr ElementType READ_BASE = 10ull;
     static constexpr size_t LOG_BASE = 8;
+    */
     bool sign;
     size_t log_len, len;
     BlockHandle data;
-    BasicIntegerType(size_t log_len);
+    IOBasic iobasic;
+    BasicIntegerType(size_t log_len, IOBasic iobasic);
     virtual ~BasicIntegerType();
     ElementType* get_pointer() const noexcept;
 };
@@ -341,16 +345,18 @@ struct BasicBinaryOperation: public BasicNodeType {
 };
 
 struct ConstantNode: public BasicNodeType {
-    //bool referenced;
-    //ConstantNode(bool referenced = false);
-    //ConstantNode(const BasicNodeType& node, bool referenced = false);
-    ConstantNode(size_t precision_digits);
+    ConstantNode(size_t log_len, IOBasic iobasic);
     ConstantNode(const BasicNodeType& node);
     ~ConstantNode() override;
     void generate_procedure() override;
 };
 
 void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& data);
+void parse_integer_to_stream(std::ostream& stream, const BasicIntegerType& data) noexcept;
+
+/*
+void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& data);
 std::ostream& parse_integer_to_stream(std::ostream& stream, const BasicIntegerType& data) noexcept;
+*/
 
 }

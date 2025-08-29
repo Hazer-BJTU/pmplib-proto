@@ -2,7 +2,7 @@
 
 namespace mpengine {
 
-BasicIntegerType::BasicIntegerType(size_t log_len): sign(1), log_len(log_len), len(0) {
+BasicIntegerType::BasicIntegerType(size_t log_len, IOBasic iobasic): sign(1), log_len(log_len), len(0), iobasic(iobasic) {
     auto& memorypool = putils::MemoryPool::get_global_memorypool();
     static const size_t min_log_length = GlobalConfig::get_global_config().get_or_else<int64_t>(
         "Configurations/core/BasicIntegerType/limits/min_log_length", 0ll
@@ -71,18 +71,8 @@ BasicBinaryOperation::BasicBinaryOperation(): operand_A(nullptr), operand_B(null
 
 BasicBinaryOperation::~BasicBinaryOperation() {}
 
-/*
-ConstantNode::ConstantNode(bool referenced): referenced(referenced) {}
-
-ConstantNode::ConstantNode(const BasicNodeType& node, bool referenced): referenced(referenced) {
-    data = node.data;
-}
-*/
-
-ConstantNode::ConstantNode(size_t precision_digits) {
-    size_t len_required = (precision_digits + BasicIntegerType::LOG_BASE - 1) / BasicIntegerType::LOG_BASE;
-    size_t log_len = std::countr_zero(std::bit_ceil(len_required));
-    data = std::make_shared<BasicIntegerType>(log_len);
+ConstantNode::ConstantNode(size_t log_len, IOBasic iobasic) {
+    data = std::make_shared<BasicIntegerType>(log_len, iobasic);
 }
 
 ConstantNode::ConstantNode(const BasicNodeType& node) {
@@ -104,9 +94,9 @@ void ConstantNode::generate_procedure() {
 
 void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& data) {
     if (integer_view.empty()) {
-        throw PUTILS_GENERAL_EXCEPTION("Empty string.", "parse error");
+        throw PUTILS_GENERAL_EXCEPTION("Empty string input.", "parse error");
     }
-    std::string integer_str{integer_view};
+    std::string integer_str(integer_view);
     data.sign = true;
     if (integer_str.front() == '+') {
         integer_str = integer_str.substr(1);
@@ -115,39 +105,43 @@ void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& da
         integer_str = integer_str.substr(1);
     }
     size_t len = data.len;
-    BasicIntegerType::ElementType* arr = data.get_pointer();
+    auto arr = data.get_pointer();
     memset(arr, 0, len * sizeof(BasicIntegerType::ElementType));
+    BasicIntegerType::ElementType store_digit = 0ull, power = 1ull;
     int p = 0;
-    BasicIntegerType::ElementType element = 0, power = 1;
     for (int i = integer_str.length() - 1; i >= 0; i--) {
-        if (integer_str[i] < '0' || integer_str[i] > '9') {
+        BasicIntegerType::ElementType digit;
+        try {
+            digit = digit_parse(integer_str[i]);
+        } PUTILS_CATCH_THROW_GENERAL
+        if (digit >= base) {
             std::stringstream ss;
-            ss << "Invalid character in integer: '" << integer_str[i] << "'!";
-            throw PUTILS_GENERAL_EXCEPTION(ss.str(), "parse error");
+            ss << "Invalid digit: '" << integer_str[i] << "' in base: " << base_name(data.iobasic);
+            throw PUTILS_GENERAL_EXCEPTION(ss.str(), "");
         }
-        element = element + power * (integer_str[i] - '0');
-        power *= BasicIntegerType::READ_BASE;
-        if (power == BasicIntegerType::BASE) {
+        store_digit += power * digit;
+        power *= base(data.iobasic);
+        if (power == store_base(data.iobasic)) {
             if (p >= len) {
-                throw PUTILS_GENERAL_EXCEPTION("Length limit exceeded.", "parse error");
+                throw PUTILS_GENERAL_EXCEPTION("Integer length limit exceeded.", "parse error");
             }
-            arr[p] = element, p++;
-            element = 0, power = 1;
+            arr[p] = store_digit, p++;
+            store_digit = 0ull, power = 1ull;
         }
     }
-    if (element != 0) {
+    if (store_digit != 0ull) {
         if (p < len) {
-            arr[p] = element;
+            arr[p] = store_digit;
         } else {
-            throw PUTILS_GENERAL_EXCEPTION("Length limit exceeded.", "parse error");
+            throw PUTILS_GENERAL_EXCEPTION("Integer length limit exceeded.", "parse error");
         }
     }
     return;
 }
 
-std::ostream& parse_integer_to_stream(std::ostream& stream, const BasicIntegerType& data) noexcept {
+void parse_integer_to_stream(std::ostream& stream, const BasicIntegerType& data) noexcept {
     size_t len = data.len;
-    BasicIntegerType::ElementType* arr = data.get_pointer();
+    auto arr = data.get_pointer();
     if (data.sign == false) {
         stream << '-';
     }
@@ -155,9 +149,9 @@ std::ostream& parse_integer_to_stream(std::ostream& stream, const BasicIntegerTy
     for (int i = len - 1; i >= 0; i--) {
         if (arr[i] != 0ull && !none_zero) {
             none_zero = true;
-            stream << arr[i];
+            write_store_digit_to_stream(stream, data.iobasic, arr[i], false);
         } else if (none_zero) {
-            stream << std::setw(BasicIntegerType::LOG_BASE) << std::setfill('0') << arr[i];
+            write_store_digit_to_stream(stream, data.iobasic, arr[i], true);
         }
     }
     if (!none_zero) {

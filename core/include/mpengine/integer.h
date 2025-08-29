@@ -1,24 +1,23 @@
 #pragma once
 
 #include <memory>
-#include <string_view>
+
+#include "IOBasic.h"
 
 namespace mpengine {
 
-struct IntegerDAGContext;
-struct BasicNodeType;
+class IntegerDAGContext {
+private:
+    struct Field;
+    std::shared_ptr<Field> field;
+    IntegerDAGContext(size_t precision, IOBasic iobasic);
+};
 
 class IntegerVarReference {
-public:
-    using VarSignature = IntegerVarReference*;
-    using ContextPtr = std::shared_ptr<IntegerDAGContext>;
-    using NodeHandle = std::shared_ptr<BasicNodeType>;
 private:
-    ContextPtr context;
-    NodeHandle node;
-public:
-    IntegerVarReference(const NodeHandle& node);
-    IntegerVarReference(size_t precision_digis, std::string_view str);
+    struct Field;
+    std::unique_ptr<Field> field;
+    IntegerVarReference(IntegerDAGContext& context);
     ~IntegerVarReference();
     IntegerVarReference(const IntegerVarReference&);
     IntegerVarReference& operator = (const IntegerVarReference&);
@@ -30,6 +29,8 @@ public:
 
 namespace pmp {
 
+using io = mpengine::IOBasic;
+using context = mpengine::IntegerDAGContext;
 using integer = mpengine::IntegerVarReference;
 
 }
