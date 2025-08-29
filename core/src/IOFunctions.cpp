@@ -1,10 +1,10 @@
-#include "IOBasic.h"
+#include "IOFunctions.h"
 
 #include <bit>
 
 #include "GeneralException.h"
 
-namespace mpengine {
+namespace mpengine::iofun {
 
 uint64_t digit_parse(const char digit) {
     if ('0' <= digit && digit <= '9') {

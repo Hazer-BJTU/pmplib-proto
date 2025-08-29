@@ -107,21 +107,22 @@ void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& da
     size_t len = data.len;
     auto arr = data.get_pointer();
     memset(arr, 0, len * sizeof(BasicIntegerType::ElementType));
+    BasicIntegerType::ElementType base = iofun::store_base(data.iobasic);
     BasicIntegerType::ElementType store_digit = 0ull, power = 1ull;
     int p = 0;
     for (int i = integer_str.length() - 1; i >= 0; i--) {
         BasicIntegerType::ElementType digit;
         try {
-            digit = digit_parse(integer_str[i]);
+            digit = iofun::digit_parse(integer_str[i]);
         } PUTILS_CATCH_THROW_GENERAL
         if (digit >= base) {
             std::stringstream ss;
-            ss << "Invalid digit: '" << integer_str[i] << "' in base: " << base_name(data.iobasic);
+            ss << "Invalid digit: '" << integer_str[i] << "' in base: " << iofun::base_name(data.iobasic);
             throw PUTILS_GENERAL_EXCEPTION(ss.str(), "");
         }
         store_digit += power * digit;
-        power *= base(data.iobasic);
-        if (power == store_base(data.iobasic)) {
+        power *= iofun::io_base(data.iobasic);
+        if (power == iofun::store_base(data.iobasic)) {
             if (p >= len) {
                 throw PUTILS_GENERAL_EXCEPTION("Integer length limit exceeded.", "parse error");
             }
@@ -149,16 +150,16 @@ void parse_integer_to_stream(std::ostream& stream, const BasicIntegerType& data)
     for (int i = len - 1; i >= 0; i--) {
         if (arr[i] != 0ull && !none_zero) {
             none_zero = true;
-            write_store_digit_to_stream(stream, data.iobasic, arr[i], false);
+            iofun::write_store_digit_to_stream(stream, data.iobasic, arr[i], false);
         } else if (none_zero) {
-            write_store_digit_to_stream(stream, data.iobasic, arr[i], true);
+            iofun::write_store_digit_to_stream(stream, data.iobasic, arr[i], true);
         }
     }
     if (!none_zero) {
         stream << '0';
-        return stream;
+        return;
     }
-    return stream;
+    return;
 }
 
 }

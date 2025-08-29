@@ -10,7 +10,8 @@
 #include "GlobalConfig.h"
 #include "RuntimeLog.h"
 #include "TaskHandler.h"
-#include "IOBasic.h"
+#include "IOBasic.hpp"
+#include "IOFunctions.h"
 
 namespace mpengine {
 
@@ -47,11 +48,6 @@ namespace mpengine {
 struct BasicIntegerType {
     using ElementType = uint64_t;
     using BlockHandle = putils::MemoryPool::BlockHandle;
-    /*
-    static constexpr ElementType BASE = 100000000ull;
-    static constexpr ElementType READ_BASE = 10ull;
-    static constexpr size_t LOG_BASE = 8;
-    */
     bool sign;
     size_t log_len, len;
     BlockHandle data;
@@ -353,10 +349,5 @@ struct ConstantNode: public BasicNodeType {
 
 void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& data);
 void parse_integer_to_stream(std::ostream& stream, const BasicIntegerType& data) noexcept;
-
-/*
-void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& data);
-std::ostream& parse_integer_to_stream(std::ostream& stream, const BasicIntegerType& data) noexcept;
-*/
 
 }

@@ -1,7 +1,9 @@
 #include <latch>
 #include <chrono>
+
 #include "Basics.h"
 #include "TaskHandler.h"
+#include "IOFunctions.h"
 
 constexpr size_t DATA_LOG_LEN_MIN = 8;
 constexpr size_t DATA_LOG_LEN_MAX = 20;
@@ -18,7 +20,7 @@ int main() {
             std::uniform_int_distribution<uint64_t> udist_value;
             std::uniform_int_distribution<size_t> udist_log_len(DATA_LOG_LEN_MIN, DATA_LOG_LEN_MAX);
             size_t log_len = udist_log_len(gen);
-            mpengine::BasicIntegerType X(log_len), Y(log_len);
+            mpengine::BasicIntegerType X(log_len, mpengine::IOBasic::dec), Y(log_len, mpengine::IOBasic::dec);
             mpengine::BasicIntegerType::ElementType *x = X.get_pointer(), *y = Y.get_pointer();
             for (int i = 0; i < X.len; i++) {
                 x[i] = udist_value(gen);

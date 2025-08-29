@@ -10,15 +10,18 @@ private:
     class ArithmeticAddTaskForInteger: public putils::Task {
     private:
         using DataArr = BasicIntegerType::ElementType*;
-        DataArr source_A, source_B, target_C;
-        bool &sign_A, &sign_B, &sign_C;
+        DataArr source_A; bool& sign_A;
+        DataArr source_B; bool& sign_B;
+        DataArr target_C; bool& sign_C;
         size_t length;
+        const BasicIntegerType::ElementType base;
     public: 
         ArithmeticAddTaskForInteger(
             DataArr source_A, bool& sign_A,
             DataArr source_B, bool& sign_B,
             DataArr target_C, bool& sign_C,
-            size_t length
+            size_t length,
+            const BasicIntegerType::ElementType base
         );
         ~ArithmeticAddTaskForInteger() override = default;
         void run() override;

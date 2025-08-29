@@ -3,9 +3,9 @@
 #include <cstdint>
 #include <iostream>
 
-namespace mpengine {
+#include "IOBasic.hpp"
 
-enum class IOBasic { oct, dec, hex };
+namespace mpengine::iofun {
 
 constexpr uint64_t io_base(IOBasic iobasic) noexcept {
     switch(iobasic) {
