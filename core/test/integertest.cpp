@@ -1,9 +1,13 @@
-#include <iostream>
 #include "pmp/integer.h"
-#include "IOFunctions.h"
 
 int main() {
-    size_t log_len = mpengine::iofun::precision_to_log_len(1000, pmp::io::hex);
-    std::cout << log_len << std::endl;
+    pmp::context context(1000, pmp::io::hex);
+    pmp::integer a("123400", context), b("-0", context), c("444551234", context);
+    pmp::integer d = a, e = d;
+    std::cout << a << std::endl;
+    std::cout << b << std::endl;
+    std::cout << c << std::endl;
+    std::cout << d << std::endl;
+    std::cout << e << std::endl;
     return 0;
 }

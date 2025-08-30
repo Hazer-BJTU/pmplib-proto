@@ -1,4 +1,5 @@
 /.vscode/
+/.venv/
 /bin/*
 !/bin/.bin
 /build/*
