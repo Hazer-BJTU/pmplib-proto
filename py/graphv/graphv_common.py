@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 
 from typing import *
 
-def graph_visualization(input_path, output_path, random_seed):
+def graph_visualization(args):
     content_str = '\{\}'
-    with open(input_path, 'r', encoding='utf-8') as file:
+    with open(args.input_path, 'r', encoding='utf-8') as file:
         content_str = file.read()
     try:
         content: Dict = json.loads(content_str)
@@ -30,7 +30,21 @@ def graph_visualization(input_path, output_path, random_seed):
             for edge in group['edge_list']:
                 assert 'source' in edge and 'target' in edge, 'Incomplete edge informations.'
                 graph.add_edge(edge['source'], edge['target'])
-        pos = nx.spring_layout(graph, seed=random_seed)
+        if args.layout_mode == 'nx_spring':
+            pos = nx.spring_layout(graph, seed=args.random_seed)
+        elif args.layout_mode == 'layer':
+            pos: Dict = {}
+            y_poses = np.arange(len(nodes_groups))
+            y_poses = (y_poses - np.mean(y_poses)) / np.std(y_poses)
+            y_poses = y_poses[::-1]
+            for i, group in enumerate(nodes_groups):
+                x_posses = np.arange(len(group['node_list']))
+                x_posses = (x_posses - np.mean(x_posses)) / np.std(x_posses)
+                node_poses = np.stack([x_posses, np.full_like(x_posses, y_poses[i])], axis=1)
+                for j, node in enumerate(group['node_list']):
+                    pos[node['index']] = node_poses[j] * args.scale_ratio
+            # print(pos)
+
         for group in nodes_groups:
             nlist = [node['index'] for node in group['node_list']]
             if 'display_configs' in group:
@@ -46,7 +60,7 @@ def graph_visualization(input_path, output_path, random_seed):
                 nx.draw_networkx_edges(graph, pos, elist, **group['display_configs'])
             else:
                 nx.draw_networkx_edges(graph, pos, elist)
-        plt.savefig(output_path)
+        plt.savefig(args.output_path)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -56,6 +70,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--input_path', type=str, required=True, help='Input json file path.')
     parser.add_argument('-o', '--output_path', type=str, nargs='?', default='output.png', help='Output picture name.')
     parser.add_argument('-r', '--random_seed', type=int, nargs='?', default=42, help='Random seed for graph layout.')
+    parser.add_argument('-l', '--layout_mode', type=str, nargs='?', default='layer', help='Layout mode for drawing graph.')
+    parser.add_argument('-s', '--scale_ratio', type=float, nargs='?', default=5.0, help='Scale ratio for drawing graph on the canvas.')
     args = parser.parse_args()
-
-    graph_visualization(args.input_path, args.output_path, args.random_seed)
+    graph_visualization(args)

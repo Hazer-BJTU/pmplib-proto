@@ -179,7 +179,7 @@ IntegerVarReference::IntegerVarReference(IntegerVarReference&& integer_ref) {
         integer_ref.field->node,
         it
     );
-    integer_ref.field.reset();
+    integer_ref.~IntegerVarReference();
 }
 
 IntegerVarReference& IntegerVarReference::operator = (IntegerVarReference&& integer_ref) {
@@ -198,7 +198,7 @@ IntegerVarReference& IntegerVarReference::operator = (IntegerVarReference&& inte
         integer_ref.field->node,
         it
     );
-    integer_ref.field.reset();
+    integer_ref.~IntegerVarReference();
     return *this;
 }
 
