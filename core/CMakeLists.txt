@@ -7,6 +7,7 @@ init_compile_definition_option(MPENGINE)
 add_compile_definition_option(MPENGINE MPENGINE_CONFIG_LOAD_DEFAULT ON)
 add_compile_definition_option(MPENGINE MPENGINE_FSM_IMPLICIT_OVERLOAD OFF)
 add_compile_definition_option(MPENGINE MPENGINE_THREAD_BINDING_OPTIMIZATION ON)
+add_compile_definition_option(MPENGINE MPENGINE_GRAPHV_DEBUG_OPTION OFF)
 
 add_library(core SHARED ${SOURCES})
 set_target_properties(core PROPERTIES PREFIX "${PROJECT_NAME}_")

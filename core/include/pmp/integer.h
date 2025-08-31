@@ -14,6 +14,7 @@ public:
     struct Field;
 private:
     std::shared_ptr<Field> field;
+    IntegerDAGContext(const std::shared_ptr<Field>& field);
     friend Field;
     friend IntegerVarReference;
 public:
@@ -23,6 +24,10 @@ public:
     IntegerDAGContext& operator = (const IntegerDAGContext& context);
     IntegerDAGContext(IntegerDAGContext&& context);
     IntegerDAGContext& operator = (IntegerDAGContext&& context);
+    IntegerVarReference make_integer(const char* integer_str);
+#ifdef MPENGINE_GRAPHV_DEBUG_OPTION
+    void export_graph_details(const char* file_path);
+#endif
 };
 
 class IntegerVarReference {
@@ -33,13 +38,16 @@ private:
     friend Field;
     friend IntegerDAGContext;
     friend std::ostream& operator << (std::ostream& stream, const IntegerVarReference& integer_ref) noexcept;
+    friend void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
 public:
     IntegerVarReference(const char* integer_str, IntegerDAGContext& context);
+    IntegerVarReference(const char* integer_str, IntegerDAGContext&& context);
     ~IntegerVarReference();
     IntegerVarReference(const IntegerVarReference& integer_ref);
     IntegerVarReference& operator = (const IntegerVarReference& integer_ref);
     IntegerVarReference(IntegerVarReference&& integer_ref);
     IntegerVarReference& operator = (IntegerVarReference&& integer_ref);
+    IntegerDAGContext get_context();
 };
 
 }

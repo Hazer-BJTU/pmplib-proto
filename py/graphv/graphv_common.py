@@ -39,7 +39,7 @@ def graph_visualization(input_path, output_path, random_seed):
                 nx.draw_networkx_nodes(graph, pos, nlist)
             if 'label_configs' in group:
                 llist = { node['index']: (node['label'] if 'label' in node else node['index']) for node in group['node_list'] }
-                nx.draw_networkx_labels(graph, pos, llist)
+                nx.draw_networkx_labels(graph, pos, llist, **group['label_configs'])
         for group in edges_groups:
             elist = [(edge['source'], edge['target']) for edge in group['edge_list']]
             if 'display_configs' in group:
