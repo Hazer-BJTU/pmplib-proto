@@ -7,6 +7,23 @@ import matplotlib.pyplot as plt
 
 from typing import *
 
+
+def customized_layout(graph, nodes_groups, args):
+    if args.layout_mode == 'nx_spring':
+        pos = nx.spring_layout(graph, seed=args.random_seed)
+    elif args.layout_mode == 'layer':
+        pos: Dict = {}
+        y_poses = np.arange(len(nodes_groups))
+        y_poses = (y_poses - np.mean(y_poses)) / np.std(y_poses)
+        y_poses = y_poses[::-1]
+        for i, group in enumerate(nodes_groups):
+            x_posses = np.arange(len(group['node_list']))
+            x_posses = (x_posses - np.mean(x_posses)) / np.std(x_posses)
+            node_poses = np.stack([x_posses, np.full_like(x_posses, y_poses[i])], axis=1)
+            for j, node in enumerate(group['node_list']):
+                pos[node['index']] = node_poses[j] * args.scale_ratio
+    return pos
+
 def graph_visualization(args):
     content_str = '\{\}'
     with open(args.input_path, 'r', encoding='utf-8') as file:
@@ -30,20 +47,8 @@ def graph_visualization(args):
             for edge in group['edge_list']:
                 assert 'source' in edge and 'target' in edge, 'Incomplete edge informations.'
                 graph.add_edge(edge['source'], edge['target'])
-        if args.layout_mode == 'nx_spring':
-            pos = nx.spring_layout(graph, seed=args.random_seed)
-        elif args.layout_mode == 'layer':
-            pos: Dict = {}
-            y_poses = np.arange(len(nodes_groups))
-            y_poses = (y_poses - np.mean(y_poses)) / np.std(y_poses)
-            y_poses = y_poses[::-1]
-            for i, group in enumerate(nodes_groups):
-                x_posses = np.arange(len(group['node_list']))
-                x_posses = (x_posses - np.mean(x_posses)) / np.std(x_posses)
-                node_poses = np.stack([x_posses, np.full_like(x_posses, y_poses[i])], axis=1)
-                for j, node in enumerate(group['node_list']):
-                    pos[node['index']] = node_poses[j] * args.scale_ratio
-            # print(pos)
+        
+        pos = customized_layout(graph, nodes_groups, args)
 
         for group in nodes_groups:
             nlist = [node['index'] for node in group['node_list']]
@@ -68,7 +73,7 @@ if __name__ == '__main__':
         description='A python script that helps with graph / tree data structure visualization.'
     )
     parser.add_argument('-i', '--input_path', type=str, required=True, help='Input json file path.')
-    parser.add_argument('-o', '--output_path', type=str, nargs='?', default='output.png', help='Output picture name.')
+    parser.add_argument('-o', '--output_path', type=str, nargs='?', default='output.pdf', help='Output picture name.')
     parser.add_argument('-r', '--random_seed', type=int, nargs='?', default=42, help='Random seed for graph layout.')
     parser.add_argument('-l', '--layout_mode', type=str, nargs='?', default='layer', help='Layout mode for drawing graph.')
     parser.add_argument('-s', '--scale_ratio', type=float, nargs='?', default=5.0, help='Scale ratio for drawing graph on the canvas.')

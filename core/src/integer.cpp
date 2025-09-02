@@ -236,10 +236,13 @@ void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGCont
     }
     stream << "\t\t\t" << "]," << std::endl;
     stream << "\t\t\t" << "\"display_configs\": {" << std::endl;
-    stream << "\t\t\t\t" << "\"node_color\": \"red\"" << std::endl;
+    stream << "\t\t\t\t" << "\"node_color\": \"red\"," << std::endl;
+    stream << "\t\t\t\t" << "\"alpha\": 0.3" << std::endl;
     stream << "\t\t\t" << "}," << std::endl;
     stream << "\t\t\t" << "\"label_configs\": {" << std::endl;
-    stream << "\t\t\t\t" << "\"font_size\": 12" << std::endl;
+    stream << "\t\t\t\t" << "\"font_size\": 5," << std::endl;
+    stream << "\t\t\t\t" << "\"font_family\": \"monospace\"" << std::endl;
+    // stream << "\t\t\t\t" << "\"horizontalalignment\": \"right\"" << std::endl;
     stream << "\t\t\t" << "}" << std::endl;
     stream << "\t\t" << "}," << std::endl;
     //Node group #2, compute nodes.
@@ -260,10 +263,13 @@ void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGCont
     }
     stream << "\t\t\t" << "]," << std::endl;
     stream << "\t\t\t" << "\"display_configs\": {" << std::endl;
-    stream << "\t\t\t\t" << "\"node_color\": \"blue\"" << std::endl;
+    stream << "\t\t\t\t" << "\"node_color\": \"blue\"," << std::endl;
+    stream << "\t\t\t\t" << "\"alpha\": 0.3" << std::endl;
     stream << "\t\t\t" << "}," << std::endl;
     stream << "\t\t\t" << "\"label_configs\": {" << std::endl;
-    stream << "\t\t\t\t" << "\"font_size\": 12" << std::endl;
+    stream << "\t\t\t\t" << "\"font_size\": 5," << std::endl;
+    stream << "\t\t\t\t" << "\"font_family\": \"monospace\"" << std::endl;
+    // stream << "\t\t\t\t" << "\"horizontalalignment\": \"right\"" << std::endl;
     stream << "\t\t\t" << "}" << std::endl;
     stream << "\t\t" << "}," << std::endl;
     //Node group #3, data domain.
@@ -288,10 +294,13 @@ void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGCont
     }
     stream << "\t\t\t" << "]," << std::endl;
     stream << "\t\t\t" << "\"display_configs\": {" << std::endl;
-    stream << "\t\t\t\t" << "\"node_color\": \"green\"" << std::endl;
+    stream << "\t\t\t\t" << "\"node_color\": \"green\"," << std::endl;
+    stream << "\t\t\t\t" << "\"alpha\": 0.3" << std::endl;
     stream << "\t\t\t" << "}," << std::endl;
     stream << "\t\t\t" << "\"label_configs\": {" << std::endl;
-    stream << "\t\t\t\t" << "\"font_size\": 12" << std::endl;
+    stream << "\t\t\t\t" << "\"font_size\": 5," << std::endl;
+    stream << "\t\t\t\t" << "\"font_family\": \"monospace\"" << std::endl;
+    // stream << "\t\t\t\t" << "\"horizontalalignment\": \"right\"" << std::endl;
     stream << "\t\t\t" << "}" << std::endl;
     stream << "\t\t" << "}" << std::endl;
     //End of node groups.
@@ -312,7 +321,11 @@ void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGCont
             stream << std::endl;
         }
     }
-    stream << "\t\t\t" << "]" << std::endl;
+    stream << "\t\t\t" << "]," << std::endl;
+    stream << "\t\t\t" << "\"display_configs\" : {" << std::endl;
+    stream << "\t\t\t\t" << "\"width\": 1.5," << std::endl;
+    stream << "\t\t\t\t" << "\"edge_color\": \"gray\"" << std::endl;
+    stream << "\t\t\t" << "}" << std::endl;
     stream << "\t\t" << "}," << std::endl;
     //Edge group #2, node -> data.
     stream << "\t\t" << "{" << std::endl;
@@ -328,7 +341,11 @@ void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGCont
             stream << std::endl;
         }
     }
-    stream << "\t\t\t" << "]" << std::endl;
+    stream << "\t\t\t" << "]," << std::endl;
+    stream << "\t\t\t" << "\"display_configs\" : {" << std::endl;
+    stream << "\t\t\t\t" << "\"width\": 1.5," << std::endl;
+    stream << "\t\t\t\t" << "\"edge_color\": \"gray\"" << std::endl;
+    stream << "\t\t\t" << "}" << std::endl;
     stream << "\t\t" << "}" << std::endl;
     //End of edge groups.
     stream << "\t" << "]" << std::endl;

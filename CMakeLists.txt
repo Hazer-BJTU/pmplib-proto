@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(pmplib VERSION 0.1 LANGUAGES CXX CUDA)
+# project(pmplib VERSION 0.1 LANGUAGES CXX CUDA)
+project(pmplib VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,10 +20,10 @@ message(STATUS "[Global]- Global option flags used: ${CXX_COMPILER_OPTION_FLAGS}
 add_compile_options(${CXX_COMPILER_OPTION_FLAGS})
 
 if(CMAKE_CUDA_COMPILER AND USE_CUPMP)
-    message(STATUS "[Global]- CUDA compiler online.")
-    set(CMAKE_CUDA_STANDARD 20)
-    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-    find_package(CUDAToolkit REQUIRED)
+    # message(STATUS "[Global]- CUDA compiler online.")
+    # set(CMAKE_CUDA_STANDARD 20)
+    # set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+    # find_package(CUDAToolkit REQUIRED)
     set(CUDA_ONLINE ON)
 else()
     message(STATUS "[GLobal]- CUDA compiler offline.")
