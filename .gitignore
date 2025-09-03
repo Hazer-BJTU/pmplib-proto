@@ -9,5 +9,6 @@
 !/lib/.lib
 /config/*
 !/config/.config
+!/config/configurations.conf
 /others/
 /trash/

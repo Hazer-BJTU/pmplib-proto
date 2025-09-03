@@ -87,7 +87,8 @@ std::mutex GlobalConfig::setting_lock;
 GlobalConfig::GlobalConfig(): root(nullptr), config_lock() {
     #ifdef MPENGINE_CONFIG_LOAD_DEFAULT
         try {
-            parse_and_set(std::string{MPENGINE_DEFAULT_CONFIGURATIONS_STRING});
+            read_from(MPENGINE_DEFAULT_CONFIG_PATH);
+            // parse_and_set(std::string{MPENGINE_DEFAULT_CONFIGURATIONS_STRING});
         } catch(...) {
             root = std::make_shared<ConfigDomainNode>();
         }
@@ -235,10 +236,12 @@ void GlobalConfig::export_all(const std::string& input_filepath) const noexcept 
 void GlobalConfig::parse_and_set(const std::string& config_str) {
     static ConfigParser config_parser;
     std::vector<std::pair<ConfigParser::identifier, std::string>> tokens;
-    bool successful = config_parser.parse_and_get_tokens(config_str, tokens);
-    if (!successful) {
-        throw PUTILS_GENERAL_EXCEPTION("(Configurations):  Wrong configuration file format.", "invalid config format");
-    }
+    try {
+        bool successful = config_parser.parse_and_get_tokens(config_str, tokens);
+    } PUTILS_CATCH_THROW_GENERAL
+    // if (!successful) {
+    //    throw PUTILS_GENERAL_EXCEPTION("(Configurations):  Wrong configuration file format.", "invalid config format");
+    // }
     std::stack<NodePtr> node_stack;
     root = std::make_shared<ConfigDomainNode>();
     node_stack.push(root);

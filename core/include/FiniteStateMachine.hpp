@@ -282,7 +282,7 @@ struct cs {
     static inline const std::string control = "\0\a\b\t\n\v\f\r\e";
     static inline const std::string invisible = " \t\n\r\v\f\0\a\b\t\n\v\f\r\e";
     static inline const std::string visible = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~";
-    static inline const std::string text = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ \n";
+    static inline const std::string text = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ \t\n\r\v\f";
     static inline const std::string any = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ \t\n\r\v\f\0\a\b\t\n\v\f\r\e";
     static bool in(std::string_view charset1, std::string_view charset2) noexcept {
         for (const char& c: charset1) {

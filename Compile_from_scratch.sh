@@ -4,8 +4,6 @@ rm -rf build/*
 touch build/.build
 rm -rf lib/*
 touch lib/.lib
-rm -rf config/*
-touch config/.config
 cmake -B build \
 -DUSE_CUPMP=ON \
 -DGENERATE_TEST_TARGETS=ON \

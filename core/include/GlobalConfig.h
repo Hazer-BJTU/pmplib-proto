@@ -12,9 +12,9 @@
 #include "RuntimeLog.h"
 #include "FiniteStateMachine.hpp"
 
-#ifdef MPENGINE_CONFIG_LOAD_DEFAULT
-#include "DefaultConfigs.hpp"
-#endif 
+// #ifdef MPENGINE_CONFIG_LOAD_DEFAULT
+// #include "DefaultConfigs.hpp"
+// #endif 
 
 namespace mpengine {
 
@@ -245,14 +245,12 @@ public:
         initialize();
     }
     ~ConfigParser() override {}
-    bool parse_and_get_tokens(const std::string& configs, std::vector<std::pair<identifier, std::string>>& tokens_out) noexcept {
+    bool parse_and_get_tokens(const std::string& configs, std::vector<std::pair<identifier, std::string>>& tokens_out) {
         reset();
         tokens.clear();
         try {
             steps(configs);
-        } catch(...) {
-            return false;
-        }
+        } PUTILS_CATCH_THROW_GENERAL
         if (!accepted()) {
             return false;
         }
