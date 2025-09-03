@@ -13,7 +13,7 @@ option(BUILD_RELEASE OFF)
 if(BUILD_RELEASE)
     set(CXX_COMPILER_OPTION_FLAGS "-O3")
 else()
-    set(CXX_COMPILER_OPTION_FLAGS "-g" "-rdynamic" "-O3")
+    set(CXX_COMPILER_OPTION_FLAGS "-g3" "-rdynamic" "-O0")
 endif()
 
 message(STATUS "[Global]- Global option flags used: ${CXX_COMPILER_OPTION_FLAGS}")

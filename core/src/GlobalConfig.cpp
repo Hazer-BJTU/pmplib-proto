@@ -274,6 +274,7 @@ void GlobalConfig::parse_and_set(const std::string& config_str) {
                 throw PUTILS_GENERAL_EXCEPTION("(Configurations): Value type nodes cannot add subdomains.", "type error");
             }
             if (it->first == ConfigParser::identifier::bracket) {
+                brackets++;
                 auto [new_node, inserted] = dnode->children.insert(std::make_pair(key_name, std::make_shared<ConfigDomainNode>()));
                 node_stack.push(new_node->second);
             } else if (it->first == ConfigParser::identifier::value) {
