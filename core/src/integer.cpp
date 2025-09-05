@@ -5,6 +5,7 @@
 #include <fstream>
 
 #include "Basics.h"
+#include "StructuredNotation.hpp"
 
 namespace mpengine {
 
@@ -215,141 +216,104 @@ std::ostream& operator << (std::ostream& stream, const IntegerVarReference& inte
 }
 
 void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGContext::Field>& field) noexcept {
-    stream << "{" << std::endl;
-    //Start of node groups.
-    stream << "\t" << "\"nodes_groups\": [" << std::endl;
-    //Node group #1, integer references.
-    stream << "\t\t" << "{" << std::endl;
-    stream << "\t\t\t" << "\"node_list\": [" << std::endl;
-    size_t idx = 0;
-    for (auto it = field->signatures.begin(); it != field->signatures.end(); it++) {
-        idx++;
-        stream << "\t\t\t\t" << "{" << std::endl;
-        stream << "\t\t\t\t\t" << "\"index\": " << reinterpret_cast<uintptr_t>(*it) << "," << std::endl;
-        stream << "\t\t\t\t\t" << "\"label\": " << "\"reference#" << idx << "\"" << std::endl;
-        stream << "\t\t\t\t" << "}";
-        if (std::next(it) != field->signatures.end()) {
-            stream << "," << std::endl;
-        } else {
-            stream << std::endl;
-        }
-    }
-    stream << "\t\t\t" << "]," << std::endl;
-    stream << "\t\t\t" << "\"display_configs\": {" << std::endl;
-    stream << "\t\t\t\t" << "\"node_color\": \"red\"," << std::endl;
-    stream << "\t\t\t\t" << "\"alpha\": 0.3" << std::endl;
-    stream << "\t\t\t" << "}," << std::endl;
-    stream << "\t\t\t" << "\"label_configs\": {" << std::endl;
-    stream << "\t\t\t\t" << "\"font_size\": 5," << std::endl;
-    stream << "\t\t\t\t" << "\"font_family\": \"monospace\"" << std::endl;
-    // stream << "\t\t\t\t" << "\"horizontalalignment\": \"right\"" << std::endl;
-    stream << "\t\t\t" << "}" << std::endl;
-    stream << "\t\t" << "}," << std::endl;
-    //Node group #2, compute nodes.
-    stream << "\t\t" << "{" << std::endl;
-    stream << "\t\t\t" << "\"node_list\": [" << std::endl;
-    idx = 0;
-    for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
-        idx++;
-        stream << "\t\t\t\t" << "{" << std::endl;
-        stream << "\t\t\t\t\t" << "\"index\": " << reinterpret_cast<uintptr_t>(it->get()) << "," << std::endl;
-        stream << "\t\t\t\t\t" << "\"label\": " << "\"dag_node#" << idx << "\"" << std::endl;
-        stream << "\t\t\t\t" << "}";
-        if (std::next(it) != field->nodes.end()) {
-            stream << "," << std::endl;
-        } else {
-            stream << std::endl;
-        }
-    }
-    stream << "\t\t\t" << "]," << std::endl;
-    stream << "\t\t\t" << "\"display_configs\": {" << std::endl;
-    stream << "\t\t\t\t" << "\"node_color\": \"blue\"," << std::endl;
-    stream << "\t\t\t\t" << "\"alpha\": 0.3" << std::endl;
-    stream << "\t\t\t" << "}," << std::endl;
-    stream << "\t\t\t" << "\"label_configs\": {" << std::endl;
-    stream << "\t\t\t\t" << "\"font_size\": 5," << std::endl;
-    stream << "\t\t\t\t" << "\"font_family\": \"monospace\"" << std::endl;
-    // stream << "\t\t\t\t" << "\"horizontalalignment\": \"right\"" << std::endl;
-    stream << "\t\t\t" << "}" << std::endl;
-    stream << "\t\t" << "}," << std::endl;
-    //Node group #3, data domain.
-    stream << "\t\t" << "{" << std::endl;
-    stream << "\t\t\t" << "\"node_list\": [" << std::endl;
-    idx = 0;
-    std::set<uintptr_t> data_index;
-    for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
-        data_index.insert(reinterpret_cast<uintptr_t>((*it)->data.get()));
-    }
-    for (auto it = data_index.begin(); it != data_index.end(); it++) {
-        idx++;
-        stream << "\t\t\t\t" << "{" << std::endl;
-        stream << "\t\t\t\t\t" << "\"index\": " << *it << ", " << std::endl;
-        stream << "\t\t\t\t\t" << "\"label\": " << "\"data#" << idx << "\"" << std::endl;
-        stream << "\t\t\t\t" << "}";
-        if (std::next(it) != data_index.end()) {
-            stream << "," << std::endl;
-        } else {
-            stream << std::endl;
-        }
-    }
-    stream << "\t\t\t" << "]," << std::endl;
-    stream << "\t\t\t" << "\"display_configs\": {" << std::endl;
-    stream << "\t\t\t\t" << "\"node_color\": \"green\"," << std::endl;
-    stream << "\t\t\t\t" << "\"alpha\": 0.3" << std::endl;
-    stream << "\t\t\t" << "}," << std::endl;
-    stream << "\t\t\t" << "\"label_configs\": {" << std::endl;
-    stream << "\t\t\t\t" << "\"font_size\": 5," << std::endl;
-    stream << "\t\t\t\t" << "\"font_family\": \"monospace\"" << std::endl;
-    // stream << "\t\t\t\t" << "\"horizontalalignment\": \"right\"" << std::endl;
-    stream << "\t\t\t" << "}" << std::endl;
-    stream << "\t\t" << "}" << std::endl;
-    //End of node groups.
-    stream << "\t" << "]," << std::endl;
-    //Start of edge groups.
-    stream << "\t" << "\"edges_groups\": [" << std::endl;
-    //Edge group #1, reference -> node.
-    stream << "\t\t" << "{" << std::endl;
-    stream << "\t\t\t" << "\"edge_list\": [" << std::endl;
-    for (auto it = field->signatures.begin(); it != field->signatures.end(); it++) {
-        stream << "\t\t\t\t" << "{" << std::endl;
-        stream << "\t\t\t\t\t" << "\"source\": " << reinterpret_cast<uintptr_t>(*it) << "," << std::endl;
-        stream << "\t\t\t\t\t" << "\"target\": " << reinterpret_cast<uintptr_t>((*it)->field->node.get()) << std::endl;
-        stream << "\t\t\t\t" << "}";
-        if (std::next(it) != field->signatures.end()) {
-            stream << "," << std::endl;
-        } else {
-            stream << std::endl;
-        }
-    }
-    stream << "\t\t\t" << "]," << std::endl;
-    stream << "\t\t\t" << "\"display_configs\" : {" << std::endl;
-    stream << "\t\t\t\t" << "\"width\": 1.5," << std::endl;
-    stream << "\t\t\t\t" << "\"edge_color\": \"gray\"" << std::endl;
-    stream << "\t\t\t" << "}" << std::endl;
-    stream << "\t\t" << "}," << std::endl;
-    //Edge group #2, node -> data.
-    stream << "\t\t" << "{" << std::endl;
-    stream << "\t\t\t" << "\"edge_list\": [" << std::endl;
-    for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
-        stream << "\t\t\t\t" << "{" << std::endl;
-        stream << "\t\t\t\t\t" << "\"source\": " << reinterpret_cast<uintptr_t>((*it).get()) << "," << std::endl;
-        stream << "\t\t\t\t\t" << "\"target\": " << reinterpret_cast<uintptr_t>((*it)->data.get()) << std::endl;
-        stream << "\t\t\t\t" << "}";
-        if (std::next(it) != field->nodes.end()) {
-            stream << "," << std::endl;
-        } else {
-            stream << std::endl;
-        }
-    }
-    stream << "\t\t\t" << "]," << std::endl;
-    stream << "\t\t\t" << "\"display_configs\" : {" << std::endl;
-    stream << "\t\t\t\t" << "\"width\": 1.5," << std::endl;
-    stream << "\t\t\t\t" << "\"edge_color\": \"gray\"" << std::endl;
-    stream << "\t\t\t" << "}" << std::endl;
-    stream << "\t\t" << "}" << std::endl;
-    //End of edge groups.
-    stream << "\t" << "]" << std::endl;
-    stream << "}" << std::endl;
+    stn::beg_notation();
+        stn::beg_list("nodes_groups");
+            stn::beg_field();
+                stn::beg_list("node_list");
+                    size_t idx = 0;
+                    for (auto it = field->signatures.begin(); it != field->signatures.end(); it++) {
+                        idx++;
+                        stn::beg_field();
+                            stn::entry("index", reinterpret_cast<uintptr_t>(*it));
+                            stn::entry("label", (std::ostringstream() << "reference#" << idx).str());
+                        stn::end_field();
+                    }
+                stn::end_list();
+                stn::beg_field("display_configs");
+                    stn::entry("node_color", "red");
+                    stn::entry("alpha", 0.3);
+                stn::end_field();
+                stn::beg_field("label_configs");
+                    stn::entry("font_size", 5);
+                    stn::entry("font_family", "monospace");
+                stn::end_field();
+            stn::end_field();
+            stn::beg_field();
+                stn::beg_list("node_list");
+                    idx = 0;
+                    for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
+                        idx++;
+                        stn::beg_field();
+                            stn::entry("index", reinterpret_cast<uintptr_t>(it->get()));
+                            stn::entry("label", (std::ostringstream() << "dag_node#" << idx).str());
+                        stn::end_field();
+                    }
+                stn::end_list();
+                stn::beg_field("display_configs");
+                    stn::entry("node_color", "blue");
+                    stn::entry("alpha", 0.3);
+                stn::end_field();
+                stn::beg_field("label_configs");
+                    stn::entry("font_size", 5);
+                    stn::entry("font_family", "monospace");
+                stn::end_field();
+            stn::end_field();
+            stn::beg_field();
+                stn::beg_list("node_list");
+                    idx = 0;
+                    std::set<uintptr_t> data_index;
+                    for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
+                        data_index.insert(reinterpret_cast<uintptr_t>((*it)->data.get()));
+                    }
+                    for (auto it = data_index.begin(); it != data_index.end(); it++) {
+                        idx++;
+                        stn::beg_field();
+                            stn::entry("index", *it);
+                            stn::entry("label", (std::ostringstream() << "data#" << idx).str());
+                        stn::end_field();
+                    }
+                stn::end_list();
+                stn::beg_field("display_configs");
+                    stn::entry("node_color", "green");
+                    stn::entry("alpha", 0.3);
+                stn::end_field();
+                stn::beg_field("label_configs");
+                    stn::entry("font_size", 5);
+                    stn::entry("font_family", "monospace");
+                stn::end_field();
+            stn::end_field();
+        stn::end_list();
+        stn::beg_list("edges_groups");
+            stn::beg_field();
+                stn::beg_list("edge_list");
+                    for (auto it = field->signatures.begin(); it != field->signatures.end(); it++) {
+                        stn::beg_field();
+                            stn::entry("source", reinterpret_cast<uintptr_t>(*it));
+                            stn::entry("target", reinterpret_cast<uintptr_t>((*it)->field->node.get()));
+                        stn::end_field();
+                    }
+                stn::end_list();
+                stn::beg_field("display_configs");
+                    stn::entry("width", 1.5);
+                    stn::entry("edge_color", "gray");
+                stn::end_field();
+            stn::end_field();
+            stn::beg_field();
+                stn::beg_list("edge_list");
+                    for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
+                        stn::beg_field();
+                            stn::entry("source", reinterpret_cast<uintptr_t>((*it).get()));
+                            stn::entry("target", reinterpret_cast<uintptr_t>((*it)->data.get()));
+                        stn::end_field();
+                    }
+                stn::end_list();
+                stn::beg_field("display_configs");
+                    stn::entry("width", 1.5);
+                    stn::entry("edge_color", "gray");
+                stn::end_field();
+            stn::end_field();
+        stn::end_list();
+    stn::end_notation(stream);
     return;
 }
 

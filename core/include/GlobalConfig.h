@@ -134,7 +134,7 @@ public:
 class GlobalConfig {
 public:
     using NodePtr = std::shared_ptr<ConfigNode>;
-public:
+private:
     static const std::regex valid_key;
     static std::string config_filepath;
     static size_t indent;
