@@ -82,6 +82,10 @@ struct BasicIntegerType {
 struct BasicComputeUnitType {
     using FuncList = std::vector<std::function<void()>>;
     FuncList forward_calls;
+#ifdef MPENGINE_STORE_PROCEDURE_DETAILS
+    using DetaList = std::vector<std::string>;
+    DetaList forward_detas;
+#endif
     BasicComputeUnitType();
     virtual ~BasicComputeUnitType();
     BasicComputeUnitType(const BasicComputeUnitType&) = default;
@@ -157,6 +161,9 @@ struct ParallelizableUnit: public BasicComputeUnitType {
         try {
             predecessor.forward_calls.emplace_back([this] { try { dependency_notice(); } PUTILS_CATCH_THROW_GENERAL });
             dependency_synchronizer.increment();
+            #ifdef MPENGINE_STORE_PROCEDURE_DETAILS
+                //TO DO...
+            #endif
         } PUTILS_CATCH_THROW_GENERAL
         return;
     }
@@ -222,6 +229,9 @@ struct MonoUnit: public BasicComputeUnitType {
         try {
             predecessor.forward_calls.emplace_back([this] { try { dependency_notice(); } PUTILS_CATCH_THROW_GENERAL });
             dependency_synchronizer.increment();
+            #ifdef MPENGINE_STORE_PROCEDURE_DETAILS
+                //TO DO...
+            #endif
         } PUTILS_CATCH_THROW_GENERAL
         return;
     }

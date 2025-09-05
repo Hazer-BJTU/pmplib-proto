@@ -6,28 +6,22 @@
 namespace mpengine {
 
 class ArithmeticAddNodeForInteger: public BasicBinaryOperation {
+public:
+    using NodeHandle = std::shared_ptr<BasicNodeType>;
 private:
-    class ArithmeticAddTaskForInteger: public putils::Task {
-    private:
-        using DataArr = BasicIntegerType::ElementType*;
-        DataArr source_A; bool& sign_A;
-        DataArr source_B; bool& sign_B;
-        DataArr target_C; bool& sign_C;
-        size_t length;
-        const BasicIntegerType::ElementType base;
-    public: 
-        ArithmeticAddTaskForInteger(
-            DataArr source_A, bool& sign_A,
-            DataArr source_B, bool& sign_B,
-            DataArr target_C, bool& sign_C,
-            size_t length,
-            const BasicIntegerType::ElementType base
-        );
+    struct ArithmeticAddTaskForInteger: public putils::Task {
+        using DataRef = DataPtr&;
+        DataRef source_A;
+        DataRef source_B;
+        DataRef target_C;
+        ArithmeticAddTaskForInteger(DataRef source_A, DataRef source_B, DataRef target_C);
         ~ArithmeticAddTaskForInteger() override = default;
         void run() override;
+        std::string description() const noexcept override;
+        void allocate_data();
     };
 public:
-    ArithmeticAddNodeForInteger(BasicNodeType& node_A, BasicNodeType& node_B);
+    ArithmeticAddNodeForInteger(NodeHandle& node_A, NodeHandle& node_B);
     ~ArithmeticAddNodeForInteger() override = default;
     void generate_procedure() override;
 };
