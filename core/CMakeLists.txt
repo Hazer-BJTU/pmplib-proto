@@ -56,7 +56,15 @@ endif()
 #     "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/core_post"
 # )
 #
+
+configure_file(
+    "${PROJECT_SOURCE_DIR}/config/configurations.conf.in"
+    "${PROJECT_SOURCE_DIR}/config/configurations.conf"
+    @ONLY
+)
+
 message(STATUS "<core>- Default configurations path: ${PROJECT_SOURCE_DIR}/config/configurations.conf.")
+
 #
 # add_custom_target(core_export_default_configs ALL
 #     DEPENDS print_default_configs

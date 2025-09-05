@@ -9,6 +9,8 @@
 !/lib/.lib
 /config/*
 !/config/.config
-!/config/configurations.conf
+!/config/configurations.conf.in
+!/config/Version.h.in
 /others/
 /trash/
+/core/include/Version.h
