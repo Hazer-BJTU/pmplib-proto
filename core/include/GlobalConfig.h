@@ -134,14 +134,14 @@ public:
 class GlobalConfig {
 public:
     using NodePtr = std::shared_ptr<ConfigNode>;
-private:
+public:
     static const std::regex valid_key;
     static std::string config_filepath;
     static size_t indent;
     static std::mutex setting_lock;
     NodePtr root;
     mutable std::shared_mutex config_lock;
-    GlobalConfig();
+    GlobalConfig(bool skip_import = false);
     ~GlobalConfig();
     static std::string extract_domain(std::string& key) noexcept;
     void recursive_write(

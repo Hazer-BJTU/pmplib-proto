@@ -84,13 +84,16 @@ std::string GlobalConfig::config_filepath("configurations.conf");
 size_t GlobalConfig::indent = 4;
 std::mutex GlobalConfig::setting_lock;
 
-GlobalConfig::GlobalConfig(): root(nullptr), config_lock() {
+GlobalConfig::GlobalConfig(bool skip_import): root(nullptr), config_lock() {
     #ifdef MPENGINE_CONFIG_LOAD_DEFAULT
-        try {
-            read_from(MPENGINE_DEFAULT_CONFIG_PATH);
-            // parse_and_set(std::string{MPENGINE_DEFAULT_CONFIGURATIONS_STRING});
-        } catch(...) {
+        if (skip_import) {
             root = std::make_shared<ConfigDomainNode>();
+        } else {
+            try {
+                read_from(MPENGINE_DEFAULT_CONFIG_PATH);
+            } catch(...) {
+                root = std::make_shared<ConfigDomainNode>();
+            }
         }
     #else
         root = std::make_shared<ConfigDomainNode>();

@@ -18,6 +18,7 @@ struct Task {
     Task(Task&&) = default;
     Task& operator = (Task&&) = default;
     virtual void run() = 0;
+    virtual std::string description() const noexcept = 0;
 };
 
 class ThreadPool;
@@ -82,6 +83,11 @@ public:
         try {
             callback();
         } PUTILS_CATCH_THROW_GENERAL
+    }
+    std::string description() const noexcept override {
+        std::stringstream ss;
+        ss << "task[" << reinterpret_cast<uintptr_t>(this) << "]:unknown_lambda:no_info";
+        return ss.str();
     }
 };
 
