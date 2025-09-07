@@ -1,15 +1,14 @@
 #include <vector>
 
 #include "pmp/integer.h"
+// #include "GlobalConfig.h"
 
 int main() {
-    std::vector<pmp::integer> integers; 
-    {
-        pmp::context context(1000, pmp::io::hex);
-        for (int i = 0; i < 10; i++) {
-            integers.emplace_back(context.make_integer("FFFF"));
-        }
-    }
-    integers.front().get_context().export_graph_details("dag.json");
+    pmp::context context(1000, pmp::io::hex);
+    pmp::integer A("FFFF", context);
+    pmp::integer B = A + A;
+    pmp::integer C = B + A;
+    pmp::integer D = B + B;
+    context.export_graph_details("dag.json");
     return 0;
 }

@@ -1,71 +1,10 @@
 import json
 import argparse
 
-import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 
-from typing import *
-
-
-def customized_layout(graph, nodes_groups, args):
-    if args.layout_mode == 'nx_spring':
-        pos = nx.spring_layout(graph, seed=args.random_seed)
-    elif args.layout_mode == 'layer':
-        pos: Dict = {}
-        y_poses = np.arange(len(nodes_groups))
-        y_poses = (y_poses - np.mean(y_poses)) / np.std(y_poses)
-        y_poses = y_poses[::-1]
-        for i, group in enumerate(nodes_groups):
-            x_posses = np.arange(len(group['node_list']))
-            x_posses = (x_posses - np.mean(x_posses)) / np.std(x_posses)
-            node_poses = np.stack([x_posses, np.full_like(x_posses, y_poses[i])], axis=1)
-            for j, node in enumerate(group['node_list']):
-                pos[node['index']] = node_poses[j] * args.scale_ratio
-    return pos
-
-def graph_visualization(args):
-    content_str = '\{\}'
-    with open(args.input_path, 'r', encoding='utf-8') as file:
-        content_str = file.read()
-    try:
-        content: Dict = json.loads(content_str)
-    except Exception as e:
-        print(f'An error occurred during json parsing: {e}')
-    else:
-        graph = nx.DiGraph()
-        assert 'nodes_groups' in content and 'edges_groups' in content, 'Incomplete graph informations.'
-        nodes_groups: List = content['nodes_groups']
-        edges_groups: List = content['edges_groups']
-        for group in nodes_groups:
-            assert 'node_list' in group, 'Node list missing.'
-            for node in group['node_list']:
-                assert 'index' in node, 'Node index missing.'
-                graph.add_node(node['index'])
-        for group in edges_groups:
-            assert 'edge_list' in group, 'Edge list missing.'
-            for edge in group['edge_list']:
-                assert 'source' in edge and 'target' in edge, 'Incomplete edge informations.'
-                graph.add_edge(edge['source'], edge['target'])
-        
-        pos = customized_layout(graph, nodes_groups, args)
-
-        for group in nodes_groups:
-            nlist = [node['index'] for node in group['node_list']]
-            if 'display_configs' in group:
-                nx.draw_networkx_nodes(graph, pos, nlist, **group['display_configs'])
-            else:
-                nx.draw_networkx_nodes(graph, pos, nlist)
-            if 'label_configs' in group:
-                llist = { node['index']: (node['label'] if 'label' in node else node['index']) for node in group['node_list'] }
-                nx.draw_networkx_labels(graph, pos, llist, **group['label_configs'])
-        for group in edges_groups:
-            elist = [(edge['source'], edge['target']) for edge in group['edge_list']]
-            if 'display_configs' in group:
-                nx.draw_networkx_edges(graph, pos, elist, **group['display_configs'])
-            else:
-                nx.draw_networkx_edges(graph, pos, elist)
-        plt.savefig(args.output_path)
+from utils import graphv_method_factory
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -73,9 +12,37 @@ if __name__ == '__main__':
         description='A python script that helps with graph / tree data structure visualization.'
     )
     parser.add_argument('-i', '--input_path', type=str, required=True, help='Input json file path.')
-    parser.add_argument('-o', '--output_path', type=str, nargs='?', default='output.pdf', help='Output picture name.')
-    parser.add_argument('-r', '--random_seed', type=int, nargs='?', default=42, help='Random seed for graph layout.')
-    parser.add_argument('-l', '--layout_mode', type=str, nargs='?', default='layer', help='Layout mode for drawing graph.')
-    parser.add_argument('-s', '--scale_ratio', type=float, nargs='?', default=5.0, help='Scale ratio for drawing graph on the canvas.')
+    parser.add_argument('-o', '--output_path', type=str, nargs='?', default='output.pdf', help='Output picture path.')
+    parser.add_argument('-m', '--method', type=str, nargs='?', default='graphv_dag', help='Method to visualize a graph.')
+    parser.add_argument('-a', '--arguments', type=str, nargs='?', default='{ \"empty\": true }', help='Method configurations.')
     args = parser.parse_args()
-    graph_visualization(args)
+    
+    try:
+        method_args = json.loads(args.arguments)
+    except Exception as e:
+        print(f"An error has occurred when parsing arguments: '{args.arguments}': {e}.")
+        method_args = {}
+    method = graphv_method_factory.get(args.method, file_path=args.input_path, args=method_args)
+
+    try:
+        graph, nodes_instructions, edges_instructions, pos = method.get_graph_instructions()
+        
+        for inst in nodes_instructions:
+            if 'display_configs' in inst:
+                nx.draw_networkx_nodes(graph, pos, inst['list'], **inst['display_configs'])
+            else:
+                nx.draw_networkx_nodes(graph, pos, inst['list'])
+            if 'label_configs' in inst:
+                nx.draw_networkx_labels(graph, pos, inst['label'], **inst['label_configs'])
+        
+        for inst in edges_instructions:
+            if 'display_configs' in inst:
+                nx.draw_networkx_edges(graph, pos, inst['list'], **inst['display_configs'])
+            else:
+                nx.draw_networkx_edges(graph, pos, inst['list'])
+            if 'label_configs' in inst:
+                nx.draw_networkx_edge_labels(graph, pos, inst['label'], **inst['label_configs'])
+
+        plt.savefig(args.output_path)
+    except Exception as e:
+        print(f'Failed to generate instructions for graph visualization: {e}.')
