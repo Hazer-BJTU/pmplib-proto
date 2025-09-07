@@ -5,6 +5,7 @@
 #include <fstream>
 
 #include "Basics.h"
+#include "Arithmetic.h"
 #include "StructuredNotation.hpp"
 
 namespace mpengine {
@@ -84,7 +85,7 @@ IntegerVarReference IntegerDAGContext::make_integer(const char* integer_str) {
     } PUTILS_CATCH_THROW_GENERAL
 }
 
-void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
+void collect_graph_details(std::ostream& stream, std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
 
 #ifdef MPENGINE_GRAPHV_DEBUG_OPTION
 void IntegerDAGContext::export_graph_details(const char* file_path) {
@@ -98,7 +99,7 @@ void IntegerDAGContext::export_graph_details(const char* file_path) {
         if (field == nullptr) {
             throw PUTILS_GENERAL_EXCEPTION("Unable to export details of a released context object.", "context error");
         }
-        export_context_details(file_out, field);
+        collect_graph_details(file_out, field);
         return;
     } PUTILS_CATCH_THROW_GENERAL
 }
@@ -155,15 +156,7 @@ IntegerVarReference& IntegerVarReference::operator = (const IntegerVarReference&
     if (this == &integer_ref) {
         return *this;
     }
-    auto it = integer_ref.field->context->signatures.emplace(
-        integer_ref.field->context->signatures.end(),
-        this
-    );
-    field = std::make_unique<IntegerVarReference::Field>(
-        integer_ref.field->context, 
-        integer_ref.field->node,
-        it
-    );
+    field->node = integer_ref.field->node;
     return *this;
 }
 
@@ -190,15 +183,7 @@ IntegerVarReference& IntegerVarReference::operator = (IntegerVarReference&& inte
     if (this == &integer_ref) {
         return *this;
     }
-    auto it = integer_ref.field->context->signatures.emplace(
-        integer_ref.field->context->signatures.end(),
-        this
-    );
-    field = std::make_unique<IntegerVarReference::Field>(
-        integer_ref.field->context, 
-        integer_ref.field->node,
-        it
-    );
+    field->node = integer_ref.field->node;
     integer_ref.~IntegerVarReference();
     return *this;
 }
@@ -215,10 +200,10 @@ std::ostream& operator << (std::ostream& stream, const IntegerVarReference& inte
     return stream;
 }
 
-void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGContext::Field>& field) noexcept {
+void collect_graph_details(std::ostream& stream, std::shared_ptr<IntegerDAGContext::Field>& field) noexcept {
     stn::beg_notation();
-        stn::beg_list("nodes_groups");
-            stn::beg_field();
+        stn::beg_field("nodes_groups");
+            stn::beg_field("references");
                 stn::beg_list("node_list");
                     size_t idx = 0;
                     for (auto it = field->signatures.begin(); it != field->signatures.end(); it++) {
@@ -238,7 +223,7 @@ void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGCont
                     stn::entry("font_family", "monospace");
                 stn::end_field();
             stn::end_field();
-            stn::beg_field();
+            stn::beg_field("dag_nodes");
                 stn::beg_list("node_list");
                     idx = 0;
                     for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
@@ -258,12 +243,14 @@ void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGCont
                     stn::entry("font_family", "monospace");
                 stn::end_field();
             stn::end_field();
-            stn::beg_field();
+            stn::beg_field("datas");
                 stn::beg_list("node_list");
                     idx = 0;
                     std::set<uintptr_t> data_index;
                     for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
-                        data_index.insert(reinterpret_cast<uintptr_t>((*it)->data.get()));
+                        if ((*it)->data != nullptr) {
+                            data_index.insert(reinterpret_cast<uintptr_t>((*it)->data.get()));
+                        }
                     }
                     for (auto it = data_index.begin(); it != data_index.end(); it++) {
                         idx++;
@@ -282,9 +269,9 @@ void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGCont
                     stn::entry("font_family", "monospace");
                 stn::end_field();
             stn::end_field();
-        stn::end_list();
-        stn::beg_list("edges_groups");
-            stn::beg_field();
+        stn::end_field();
+        stn::beg_field("edges_groups");
+            stn::beg_field("references_nodes");
                 stn::beg_list("edge_list");
                     for (auto it = field->signatures.begin(); it != field->signatures.end(); it++) {
                         stn::beg_field();
@@ -298,13 +285,15 @@ void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGCont
                     stn::entry("edge_color", "gray");
                 stn::end_field();
             stn::end_field();
-            stn::beg_field();
+            stn::beg_field("nodes_datas");
                 stn::beg_list("edge_list");
                     for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
-                        stn::beg_field();
-                            stn::entry("source", reinterpret_cast<uintptr_t>((*it).get()));
-                            stn::entry("target", reinterpret_cast<uintptr_t>((*it)->data.get()));
-                        stn::end_field();
+                        if ((*it)->data != nullptr) {
+                            stn::beg_field();
+                                stn::entry("source", reinterpret_cast<uintptr_t>((*it).get()));
+                                stn::entry("target", reinterpret_cast<uintptr_t>((*it)->data.get()));
+                            stn::end_field();
+                        }
                     }
                 stn::end_list();
                 stn::beg_field("display_configs");
@@ -312,9 +301,39 @@ void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGCont
                     stn::entry("edge_color", "gray");
                 stn::end_field();
             stn::end_field();
-        stn::end_list();
+            stn::beg_field("nodes_nodes");
+                stn::beg_list("edge_list");
+                    for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
+                        auto& node_list = (*it)->nexts;
+                        for (auto next_it = node_list.begin(); next_it != node_list.end(); next_it++) {
+                            stn::beg_field();
+                                stn::entry("source", reinterpret_cast<uintptr_t>((*it).get()));
+                                stn::entry("target", reinterpret_cast<uintptr_t>(*next_it));
+                            stn::end_field();
+                        }
+                    }
+                stn::end_list();
+                stn::beg_field("display_configs");
+                    stn::entry("width", 1.5);
+                    stn::entry("edge_color", "blue");
+                stn::end_field();
+            stn::end_field();
+        stn::end_field();
     stn::end_notation(stream);
     return;
+}
+
+IntegerVarReference operator + (IntegerVarReference& integer_A, IntegerVarReference& integer_B) {
+    if (integer_A.field->context != integer_B.field->context) {
+        throw PUTILS_GENERAL_EXCEPTION("Unable to add two integers of different contexts!", "arithmetic error");
+    }
+    auto& context_ptr = integer_A.field->context;
+    IntegerVarReference integer_result = integer_A;
+    integer_result.field->node = std::make_shared<ArithmeticAddNodeForInteger>(
+        integer_A.field->node, integer_B.field->node
+    );
+    context_ptr->nodes.emplace_back(integer_result.field->node);
+    return integer_result;
 }
 
 }
