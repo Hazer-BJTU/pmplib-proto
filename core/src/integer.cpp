@@ -28,6 +28,10 @@ struct IntegerVarReference::Field {
     const SignatureIt signit;
 };
 
+void collect_graph_details(std::ostream& stream, std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
+
+bool nodes_topological_sort(IntegerDAGContext::Field::NodeHandles& node_handle_list) noexcept;
+
 IntegerDAGContext::IntegerDAGContext(size_t precesion, IOBasic iobasic) {
     field = std::make_shared<IntegerDAGContext::Field>(
         IntegerDAGContext::Field::Signatures(),
@@ -84,8 +88,6 @@ IntegerVarReference IntegerDAGContext::make_integer(const char* integer_str) {
         return IntegerVarReference(integer_str, *this);
     } PUTILS_CATCH_THROW_GENERAL
 }
-
-void collect_graph_details(std::ostream& stream, std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
 
 #ifdef MPENGINE_GRAPHV_DEBUG_OPTION
 void IntegerDAGContext::export_graph_details(const char* file_path) {
@@ -321,6 +323,42 @@ void collect_graph_details(std::ostream& stream, std::shared_ptr<IntegerDAGConte
         stn::end_field();
     stn::end_notation(stream);
     return;
+}
+
+bool nodes_topological_sort(IntegerDAGContext::Field::NodeHandles& node_handle_list) noexcept {
+    using NodeHandle = std::shared_ptr<BasicNodeType>;
+    using NodeHandles = IntegerDAGContext::Field::NodeHandles;
+    using NodePtr = BasicNodeType*;
+    NodeHandles sorted_node_handle_list;
+    std::deque<NodePtr> node_queue;
+    std::unordered_map<NodePtr, std::pair<NodeHandles::iterator, size_t>> node_degs;
+    for (auto it = node_handle_list.begin(); it != node_handle_list.end(); it++) {
+        node_degs[it->get()] = std::make_pair(it, 0);
+    }
+    for (const auto& node_handle: node_handle_list) {
+        for (const auto next_node_ptr: node_handle->nexts) {
+            node_degs[next_node_ptr].second++;
+        }
+    }
+    for (const auto& [node_ptr, node_info]: node_degs) {
+        if (node_info.second == 0) {
+            node_queue.push_back(node_ptr);
+        }
+    }
+    while(!node_queue.empty()) {
+        auto node_ptr = node_queue.front();
+        node_queue.pop_front();
+        sorted_node_handle_list.emplace_back(*(node_degs[node_ptr].first));
+        for (const auto next_node_ptr: node_ptr->nexts) {
+            auto& node_info = node_degs[next_node_ptr];
+            if (--node_info.second == 0) {
+                node_queue.push_back(node_info.first->get());
+            }
+        }
+    }
+    const bool ret_flag = node_handle_list.size() == sorted_node_handle_list.size();
+    node_handle_list = std::move(sorted_node_handle_list);
+    return ret_flag;
 }
 
 IntegerVarReference operator + (IntegerVarReference& integer_A, IntegerVarReference& integer_B) {

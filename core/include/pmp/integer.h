@@ -38,7 +38,8 @@ private:
     friend Field;
     friend IntegerDAGContext;
     friend std::ostream& operator << (std::ostream& stream, const IntegerVarReference& integer_ref) noexcept;
-    friend void export_context_details(std::ostream& stream, std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
+    friend void collect_graph_details(std::ostream& stream, std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
+    friend IntegerVarReference operator + (IntegerVarReference& integer_A, IntegerVarReference& integer_B);
 public:
     IntegerVarReference(const char* integer_str, IntegerDAGContext& context);
     IntegerVarReference(const char* integer_str, IntegerDAGContext&& context);

@@ -162,7 +162,9 @@ struct ParallelizableUnit: public BasicComputeUnitType {
             predecessor.forward_calls.emplace_back([this] { try { dependency_notice(); } PUTILS_CATCH_THROW_GENERAL });
             dependency_synchronizer.increment();
             #ifdef MPENGINE_STORE_PROCEDURE_DETAILS
-                //TO DO...
+                std::ostringstream oss;
+                oss << "ParallelizableUnit[" << reinterpret_cast<uintptr_t>(this) << "]:dependency_notice";
+                forward_detas.emplace_back(oss.str());
             #endif
         } PUTILS_CATCH_THROW_GENERAL
         return;
@@ -230,7 +232,9 @@ struct MonoUnit: public BasicComputeUnitType {
             predecessor.forward_calls.emplace_back([this] { try { dependency_notice(); } PUTILS_CATCH_THROW_GENERAL });
             dependency_synchronizer.increment();
             #ifdef MPENGINE_STORE_PROCEDURE_DETAILS
-                //TO DO...
+                std::ostringstream oss;
+                oss << "MonoUnit[" << reinterpret_cast<uintptr_t>(this) << "]:dependency_notice";
+                forward_detas.emplace_back(oss.str());
             #endif
         } PUTILS_CATCH_THROW_GENERAL
         return;
