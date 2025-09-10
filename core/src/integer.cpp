@@ -107,6 +107,26 @@ void IntegerDAGContext::export_graph_details(const char* file_path) {
 }
 #endif
 
+void IntegerDAGContext::nodes_sort() {
+    if (field->nodes.size() <= 1) {
+        return;
+    }
+    bool flag = nodes_topological_sort(field->nodes);
+    if (!flag) {
+        throw PUTILS_GENERAL_EXCEPTION("Loop detected in a DAG!", "context error");
+    }
+    return;
+}
+
+void IntegerDAGContext::generate_procedures() {
+    for (auto& node_handle: field->nodes) {
+        try {
+            node_handle->generate_procedure();
+        } PUTILS_CATCH_THROW_GENERAL
+    }
+    return;
+}
+
 IntegerVarReference::IntegerVarReference(const char* integer_str, IntegerDAGContext& context) {
     std::string_view integer_view(integer_str);
     auto node = std::make_shared<ConstantNode>(context.field->log_len, context.field->iobasic);

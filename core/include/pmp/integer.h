@@ -26,7 +26,15 @@ public:
     IntegerDAGContext& operator = (IntegerDAGContext&& context);
     IntegerVarReference make_integer(const char* integer_str);
 #ifdef MPENGINE_GRAPHV_DEBUG_OPTION
+public:
     void export_graph_details(const char* file_path);
+    void nodes_sort();
+    void generate_procedures();
+#else
+private:
+    void export_graph_details(const char* file_path);
+    void nodes_sort();
+    void generate_procedures();
 #endif
 };
 

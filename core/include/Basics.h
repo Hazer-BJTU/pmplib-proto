@@ -54,7 +54,9 @@ struct BasicIntegerType {
     IOBasic iobasic;
     BasicIntegerType(size_t log_len, IOBasic iobasic);
     virtual ~BasicIntegerType();
+    virtual void allocate();
     ElementType* get_pointer() const noexcept;
+    ElementType* get_ensured_pointer();
 };
 
 /**

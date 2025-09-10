@@ -2,13 +2,17 @@
 
 namespace mpengine {
 
-BasicIntegerType::BasicIntegerType(size_t log_len, IOBasic iobasic): sign(1), log_len(log_len), len(0), iobasic(iobasic) {
-    auto& memorypool = putils::MemoryPool::get_global_memorypool();
+BasicIntegerType::BasicIntegerType(size_t log_len, IOBasic iobasic): 
+sign(1), log_len(log_len), len(0), data(nullptr), iobasic(iobasic) {
+    //auto& memorypool = putils::MemoryPool::get_global_memorypool();
     static const size_t min_log_length = GlobalConfig::get_global_config().get_or_else<int64_t>(
         "Configurations/core/BasicIntegerType/limits/min_log_length", 0ll
     );
     static const size_t max_log_length = GlobalConfig::get_global_config().get_or_else<int64_t>(
         "Configurations/core/BasicIntegerType/limits/max_log_length", 0ll
+    );
+    static const bool delayed_allocation = GlobalConfig::get_global_config().get_or_else<bool>(
+        "Configurations/core/MemoryPreference/delayed_allocation", true
     );
     if (max_log_length <= min_log_length) {
         throw PUTILS_GENERAL_EXCEPTION("Failed to fetch configurations.", "basic integer init error");
@@ -26,17 +30,36 @@ BasicIntegerType::BasicIntegerType(size_t log_len, IOBasic iobasic): sign(1), lo
         );
     }
     len = 1ull << log_len;
-    try {
-        data = memorypool.allocate(len * sizeof(ElementType));
-        memset(data->get<ElementType>(), 0, len * sizeof(ElementType));
-    } PUTILS_CATCH_THROW_GENERAL
+    if (!delayed_allocation) {
+        try {
+            allocate();
+        } PUTILS_CATCH_THROW_GENERAL
+    }
 }
 
 BasicIntegerType::~BasicIntegerType() {
     putils::release(data);
 }
 
+void BasicIntegerType::allocate() {
+    if (data != nullptr) {
+        return;
+    }
+    try {
+        data = putils::MemoryPool::get_global_memorypool().allocate(len * sizeof(ElementType));
+        memset(data->get<ElementType>(), 0, len * sizeof(ElementType));
+    } PUTILS_CATCH_THROW_GENERAL
+    return;
+}
+
 BasicIntegerType::ElementType* BasicIntegerType::get_pointer() const noexcept {
+    return data->get<ElementType>();
+}
+
+BasicIntegerType::ElementType* BasicIntegerType::get_ensured_pointer() {
+    try {
+        allocate();
+    } PUTILS_CATCH_THROW_GENERAL
     return data->get<ElementType>();
 }
 
