@@ -128,7 +128,7 @@ void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& da
         integer_str = integer_str.substr(1);
     }
     size_t len = data.len;
-    auto arr = data.get_pointer();
+    auto arr = data.get_ensured_pointer();
     memset(arr, 0, len * sizeof(BasicIntegerType::ElementType));
     BasicIntegerType::ElementType base = iofun::store_base(data.iobasic);
     BasicIntegerType::ElementType store_digit = 0ull, power = 1ull;
@@ -166,6 +166,9 @@ void parse_string_to_integer(std::string_view integer_view, BasicIntegerType& da
 void parse_integer_to_stream(std::ostream& stream, const BasicIntegerType& data) noexcept {
     size_t len = data.len;
     auto arr = data.get_pointer();
+    if (arr == nullptr) {
+        return;
+    }
     if (data.sign == false) {
         stream << '-';
     }

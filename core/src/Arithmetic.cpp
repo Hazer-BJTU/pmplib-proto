@@ -2,47 +2,18 @@
 
 namespace mpengine {
 
-void ArithmeticAddNodeForInteger::ArithmeticAddTaskForInteger::allocate_data() {
-    if (target_C != nullptr) {
-        return;
-    }
-    if (source_A == nullptr || source_B == nullptr) {
-        throw PUTILS_GENERAL_EXCEPTION("Predecessor node data is not constructed.", "DAG construction error");
-    }
-    if (source_A->len != source_B->len) {
-        std::stringstream ss;
-        ss << "Node data length mismatch: (" << source_A->len << ") can not match (" << source_B->len << ")!";
-        throw PUTILS_GENERAL_EXCEPTION(ss.str(), "DAG construction error");
-    }
-    if (source_A->iobasic != source_B->iobasic) {
-        std::stringstream ss;
-        ss << "Node data iobasic mismatch: (" << iofun::base_name(source_A->iobasic) << ") can not match (" << iofun::base_name(source_B->iobasic) << ")!";
-        throw PUTILS_GENERAL_EXCEPTION(ss.str(), "DAG construction error");
-    }
-    target_C = std::make_shared<BasicIntegerType>(source_A->log_len, source_A->iobasic);
-    return;
-}
-
 ArithmeticAddNodeForInteger::ArithmeticAddTaskForInteger::ArithmeticAddTaskForInteger(
-    DataRef source_A, DataRef source_B, DataRef target_C
-): source_A(source_A), source_B(source_B), target_C(target_C) {
-    static const bool delayed_allocation = mpengine::GlobalConfig::get_global_config().get_or_else(
-        "Configurations/core/MemoryPreference/delayed_allocation", true
-    );
-    if (!delayed_allocation) {
-        try {
-            allocate_data();
-        } PUTILS_CATCH_THROW_GENERAL
-    }
-}
+    const DataHandle& source_A,
+    const DataHandle& source_B,
+    const DataHandle& source_C
+): source_A(source_A), 
+   source_B(source_B), 
+   target_C(target_C) {}
 
 void ArithmeticAddNodeForInteger::ArithmeticAddTaskForInteger::run() {
-    try {
-        allocate_data();
-    } PUTILS_CATCH_THROW_GENERAL
-    BasicIntegerType::ElementType* data_A = source_A->get_pointer();
-    BasicIntegerType::ElementType* data_B = source_B->get_pointer();
-    BasicIntegerType::ElementType* data_C = target_C->get_pointer();
+    BasicIntegerType::ElementType* data_A = source_A->get_ensured_pointer();
+    BasicIntegerType::ElementType* data_B = source_B->get_ensured_pointer();
+    BasicIntegerType::ElementType* data_C = target_C->get_ensured_pointer();
     const size_t length = target_C->len;
     const BasicIntegerType::ElementType base = iofun::store_base(target_C->iobasic);
     bool flag = false;
@@ -111,5 +82,28 @@ void ArithmeticAddNodeForInteger::generate_procedure() {
         return;
     } PUTILS_CATCH_THROW_GENERAL
 }
+
+/*
+void ArithmeticAddNodeForInteger::ArithmeticAddTaskForInteger::allocate_data() {
+    if (target_C != nullptr) {
+        return;
+    }
+    if (source_A == nullptr || source_B == nullptr) {
+        throw PUTILS_GENERAL_EXCEPTION("Predecessor node data is not constructed.", "DAG construction error");
+    }
+    if (source_A->len != source_B->len) {
+        std::stringstream ss;
+        ss << "Node data length mismatch: (" << source_A->len << ") can not match (" << source_B->len << ")!";
+        throw PUTILS_GENERAL_EXCEPTION(ss.str(), "DAG construction error");
+    }
+    if (source_A->iobasic != source_B->iobasic) {
+        std::stringstream ss;
+        ss << "Node data iobasic mismatch: (" << iofun::base_name(source_A->iobasic) << ") can not match (" << iofun::base_name(source_B->iobasic) << ")!";
+        throw PUTILS_GENERAL_EXCEPTION(ss.str(), "DAG construction error");
+    }
+    target_C = std::make_shared<BasicIntegerType>(source_A->log_len, source_A->iobasic);
+    return;
+}
+*/
 
 }
