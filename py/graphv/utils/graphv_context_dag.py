@@ -5,8 +5,9 @@ import numpy as np
 import networkx as nx
 
 from typing import *
-from .graphv_factory import graphv_method_factory
+from .graphv_factory import as_graphv_methods
 
+@as_graphv_methods('context_dag')
 class GraphvContextDAG: 
     def __init__(self, input_file_path: str, **kwargs):
         self.input_file_path = input_file_path
@@ -79,8 +80,6 @@ class GraphvContextDAG:
         pos = nx.nx_agraph.graphviz_layout(graph, prog='dot')
 
         return graph, pos, nodes_instructions, edges_instructions
-    
-graphv_method_factory.register('context_dag', GraphvContextDAG)
 
 if __name__ == '__main__':
     # test_file_path = '/mnt/d/pmplib/bin/core_tests/dag.json'

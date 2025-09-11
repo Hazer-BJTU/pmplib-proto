@@ -1,10 +1,11 @@
+import sys
 import json
 import argparse
 
 import networkx as nx
 import matplotlib.pyplot as plt
 
-from utils import graphv_method_factory
+from utils import get_graphv_methods
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -22,7 +23,12 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"An error has occurred when parsing arguments: '{args.arguments}': {e}.")
         method_args = {}
-    method = graphv_method_factory.get(args.method, input_file_path=args.input_path, **method_args)
+
+    try:
+        method = get_graphv_methods(args.method, input_file_path=args.input_path, **method_args)
+    except Exception as e:
+        print(f"Failed to get graph visualization method '{args.method}': {e}.")
+        sys.exit(1)
 
     try:
         graph, pos, nodes_instructions, edges_instructions = method.get_graph_instructions()
@@ -46,3 +52,4 @@ if __name__ == '__main__':
         plt.savefig(args.output_path)
     except Exception as e:
         print(f'Failed to generate instructions for graph visualization: {e}.')
+        sys.exit(1)
