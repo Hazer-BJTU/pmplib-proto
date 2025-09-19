@@ -27,15 +27,12 @@ public:
     IntegerVarReference make_integer(const char* integer_str);
 #ifdef MPENGINE_GRAPHV_DEBUG_OPTION
 public:
-    void export_graph_details(const char* file_path);
-    void nodes_sort();
-    void generate_procedures();
 #else
 private:
-    void export_graph_details(const char* file_path);
+#endif
+    void export_graph_details(const char* dir_base_path);
     void nodes_sort();
     void generate_procedures();
-#endif
 };
 
 class IntegerVarReference {
@@ -46,7 +43,8 @@ private:
     friend Field;
     friend IntegerDAGContext;
     friend std::ostream& operator << (std::ostream& stream, const IntegerVarReference& integer_ref) noexcept;
-    friend void collect_graph_details(std::ostream& stream, std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
+    friend void collect_graph_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
+    friend void collect_proce_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
     friend IntegerVarReference operator + (IntegerVarReference& integer_A, IntegerVarReference& integer_B);
 public:
     IntegerVarReference(const char* integer_str, IntegerDAGContext& context);

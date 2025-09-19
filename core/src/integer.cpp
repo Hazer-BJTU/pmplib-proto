@@ -3,6 +3,7 @@
 #include <set>
 #include <list>
 #include <fstream>
+#include <filesystem>
 
 #include "Basics.h"
 #include "Arithmetic.h"
@@ -28,7 +29,9 @@ struct IntegerVarReference::Field {
     const SignatureIt signit;
 };
 
-void collect_graph_details(std::ostream& stream, std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
+void collect_graph_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
+
+void collect_proce_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
 
 bool nodes_topological_sort(IntegerDAGContext::Field::NodeHandles& node_handle_list) noexcept;
 
@@ -89,23 +92,35 @@ IntegerVarReference IntegerDAGContext::make_integer(const char* integer_str) {
     } PUTILS_CATCH_THROW_GENERAL
 }
 
-#ifdef MPENGINE_GRAPHV_DEBUG_OPTION
-void IntegerDAGContext::export_graph_details(const char* file_path) {
+void IntegerDAGContext::export_graph_details(const char* dir_base_path) {
+    if (field == nullptr) {
+        throw PUTILS_GENERAL_EXCEPTION("Unable to export details of a released context object.", "context error");
+    }
     try {
+        std::filesystem::path dir_path(dir_base_path);
+        dir_path.append("daginfo");
+        bool new_dir_created = std::filesystem::create_directories(dir_path);
+        std::filesystem::path file_path = dir_path / "dag.json";
         std::ofstream file_out(file_path);
         if (!file_out.is_open()) {
             std::stringstream ss;
             ss << "Failed to export graph details to: " << file_path << "!";
             throw PUTILS_GENERAL_EXCEPTION(ss.str(), "I/O error");
         }
-        if (field == nullptr) {
-            throw PUTILS_GENERAL_EXCEPTION("Unable to export details of a released context object.", "context error");
-        }
         collect_graph_details(file_out, field);
+        file_out.close();
+        file_path = dir_path / "pro.json";
+        file_out.open(file_path);
+        if (!file_out.is_open()) {
+            std::stringstream ss;
+            ss << "Failed to export graph details to: " << file_path << "!";
+            throw PUTILS_GENERAL_EXCEPTION(ss.str(), "I/O error");
+        }
+        collect_proce_details(file_out, field);
+        file_out.close();
         return;
     } PUTILS_CATCH_THROW_GENERAL
 }
-#endif
 
 void IntegerDAGContext::nodes_sort() {
     if (field->nodes.size() <= 1) {
@@ -222,7 +237,7 @@ std::ostream& operator << (std::ostream& stream, const IntegerVarReference& inte
     return stream;
 }
 
-void collect_graph_details(std::ostream& stream, std::shared_ptr<IntegerDAGContext::Field>& field) noexcept {
+void collect_graph_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept {
     stn::beg_notation();
         stn::beg_field("nodes_groups");
             stn::beg_field("references");
@@ -291,6 +306,32 @@ void collect_graph_details(std::ostream& stream, std::shared_ptr<IntegerDAGConte
                     stn::entry("font_family", "monospace");
                 stn::end_field();
             stn::end_field();
+            stn::beg_field("procedure");
+                stn::beg_list("node_list");
+                    idx = 0;
+                    std::set<uintptr_t> procedure_index;
+                    for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
+                        for (auto jt = (*it)->procedure.begin(); jt != (*it)->procedure.end(); jt++) {
+                            procedure_index.insert(reinterpret_cast<uintptr_t>(jt->get()));
+                        }
+                    }
+                    for (auto it = procedure_index.begin(); it != procedure_index.end(); it++) {
+                        idx++;
+                        stn::beg_field();
+                            stn::entry("index", *it);
+                            stn::entry("label", (std::ostringstream() << "proc#" << idx).str());
+                        stn::end_field();
+                    }
+                stn::end_list();
+                stn::beg_field("display_configs");
+                    stn::entry("node_color", "purple");
+                    stn::entry("alpha", 0.3);
+                stn::end_field();
+                stn::beg_field("label_configs");
+                    stn::entry("font_size", 5);
+                    stn::entry("font_family", "monospace");
+                stn::end_field();
+            stn::end_field();
         stn::end_field();
         stn::beg_field("edges_groups");
             stn::beg_field("references_nodes");
@@ -340,8 +381,48 @@ void collect_graph_details(std::ostream& stream, std::shared_ptr<IntegerDAGConte
                     stn::entry("edge_color", "blue");
                 stn::end_field();
             stn::end_field();
+            stn::beg_field("procedures_procedures");
+                stn::beg_list("edge_list");
+                    for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
+                        for (auto jt = (*it)->procedure.begin(); jt != (*it)->procedure.end(); jt++) {
+                            auto kt = std::next(jt);
+                            if (kt != (*it)->procedure.end()) {
+                                stn::beg_field();
+                                    stn::entry("source", reinterpret_cast<uintptr_t>(jt->get()));
+                                    stn::entry("target", reinterpret_cast<uintptr_t>(kt->get()));
+                                stn::end_field();
+                            }
+                        }
+                    }
+                stn::end_list();
+                stn::beg_field("display_configs");
+                    stn::entry("width", 1.5);
+                    stn::entry("edge_color", "purple");
+                stn::end_field();
+            stn::end_field();
+            stn::beg_field("nodes_procedures");
+                stn::beg_list("edge_list");
+                    for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
+                        if ((*it)->procedure.size() != 0) {
+                            stn::beg_field();
+                                stn::entry("source", reinterpret_cast<uintptr_t>((*it).get()));
+                                stn::entry("target", reinterpret_cast<uintptr_t>((*it)->procedure.front().get()));
+                            stn::end_field();
+                        }
+                    }
+                stn::end_list();
+                stn::beg_field("display_configs");
+                    stn::entry("width", 1.5);
+                    stn::entry("edge_color", "purple");
+                stn::end_field();
+            stn::end_field();
         stn::end_field();
     stn::end_notation(stream);
+    return;
+}
+
+void collect_proce_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept {
+    stream << "TO DO..." << std::endl;
     return;
 }
 

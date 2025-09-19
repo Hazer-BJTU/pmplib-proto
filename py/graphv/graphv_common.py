@@ -1,3 +1,4 @@
+import os
 import sys
 import json
 import argparse
@@ -16,6 +17,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output_path', type=str, nargs='?', default='output.pdf', help='Output picture path.')
     parser.add_argument('-m', '--method', type=str, nargs='?', default='context_dag', help='Method to visualize a graph.')
     parser.add_argument('-a', '--arguments', type=str, nargs='?', default='{ \"empty\": true }', help='Method configurations.')
+    parser.add_argument('-s', '--source_dir', type=str, nargs='?', default='.', help='File path prefix.')
     args = parser.parse_args()
     
     try:
@@ -25,7 +27,7 @@ if __name__ == '__main__':
         method_args = {}
 
     try:
-        method = get_graphv_methods(args.method, input_file_path=args.input_path, **method_args)
+        method = get_graphv_methods(args.method, input_file_path=os.path.join(args.source_dir, args.input_path), **method_args)
     except Exception as e:
         print(f"Failed to get graph visualization method '{args.method}': {e}.")
         sys.exit(1)
@@ -49,7 +51,7 @@ if __name__ == '__main__':
             if 'label_configs' in inst:
                 nx.draw_networkx_edge_labels(graph, pos, inst['label_list'], **inst['label_configs'])
 
-        plt.savefig(args.output_path)
+        plt.savefig(os.path.join(args.source_dir, args.output_path))
     except Exception as e:
         print(f'Failed to generate instructions for graph visualization: {e}.')
         sys.exit(1)

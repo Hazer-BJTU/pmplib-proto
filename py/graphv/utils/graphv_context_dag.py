@@ -64,7 +64,7 @@ class GraphvContextDAG:
                 assert 'source' in edge and 'target' in edge, 'Incomplete edge informations.'
                 graph.add_edge(edge['source'], edge['target'])
                 pair_list.append((edge['source'], edge['target']))
-                label_list[f"({edge['source']}, {edge['target']})"] = edge['label'] if 'label' in edge else f"({edge['source']}, {edge['target']})"
+                label_list[(edge['source'], edge['target'])] = edge['label'] if 'label' in edge else f"({edge['source']}, {edge['target']})"
 
             instruction: Dict = {}
             instruction['pair_list'] = pair_list
@@ -76,8 +76,12 @@ class GraphvContextDAG:
                 instruction['label_configs'] = group['label_configs']
 
             edges_instructions.append(instruction)
-
-        pos = nx.nx_agraph.graphviz_layout(graph, prog='dot')
+        
+        try:
+            pos = nx.nx_agraph.graphviz_layout(graph, prog='dot')
+        except Exception:
+            print('Use networkx built-in layout: spring_layout.')
+            pos = nx.spring_layout(graph)
 
         return graph, pos, nodes_instructions, edges_instructions
 

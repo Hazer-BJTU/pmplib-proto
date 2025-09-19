@@ -70,3 +70,13 @@ message(STATUS "<core>- Default configurations path: ${PROJECT_SOURCE_DIR}/confi
 #     DEPENDS print_default_configs
 #     COMMAND $<TARGET_FILE:print_default_configs> "${PROJECT_SOURCE_DIR}/config/configurations.conf"
 # )
+
+set(GRAPHV_PYTHON_INTERPRETER "${PROJECT_SOURCE_DIR}/.venv/bin/python3")
+set(GRAPHV_PYTHON_SCRIPT "${PROJECT_SOURCE_DIR}/py/graphv/graphv_common.py")
+configure_file(
+    "${PROJECT_SOURCE_DIR}/py/graphv/graphv.in"
+    "${PROJECT_SOURCE_DIR}/bin/pytools/graphv"
+    @ONLY
+)
+
+message(STATUS "<core>- Python tool graphv built to: ${PROJECT_SOURCE_DIR}/bin/pytools/graphv.")

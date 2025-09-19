@@ -1,0 +1,16 @@
+#!/bin/bash
+
+PYTHON_INTERPRETER="@GRAPHV_PYTHON_INTERPRETER@"
+PYTHON_SCRIPT="@GRAPHV_PYTHON_SCRIPT@"
+
+if [ ! -f "$PYTHON_INTERPRETER" ]; then
+    echo "error: python interpreter not found: $PYTHON_INTERPRETER" >&2
+    exit 1
+fi
+
+if [ ! -f "$PYTHON_SCRIPT" ]; then
+    echo "error: python script not found: $PYTHON_SCRIPT" >&2
+    exit 1
+fi
+
+exec "$PYTHON_INTERPRETER" "$PYTHON_SCRIPT" "-s" "$(pwd)" "$@"

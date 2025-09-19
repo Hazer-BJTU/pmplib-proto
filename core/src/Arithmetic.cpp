@@ -70,6 +70,20 @@ ArithmeticAddNodeForInteger::ArithmeticAddNodeForInteger(NodeHandle& node_A, Nod
     node_B->nexts.emplace_back(this);
     operand_A = node_A.get();
     operand_B = node_B.get();
+    if (operand_A->data == nullptr || operand_B->data == nullptr) {
+        throw PUTILS_GENERAL_EXCEPTION("Operands' datas are not initialized.", "DAG construction error");
+    }
+    if (operand_A->data->len != operand_B->data->len) {
+        std::stringstream ss;
+        ss << "Node data length mismatch: (" << operand_A->data->len << ") can not match (" << operand_B->data->len << ")!";
+        throw PUTILS_GENERAL_EXCEPTION(ss.str(), "DAG construction error");
+    }
+    if (operand_A->data->iobasic != operand_B->data->iobasic) {
+        std::stringstream ss;
+        ss << "Node data iobasic mismatch: (" << iofun::base_name(operand_A->data->iobasic) << ") can not match (" << iofun::base_name(operand_B->data->iobasic) << ")!";
+        throw PUTILS_GENERAL_EXCEPTION(ss.str(), "DAG construction error");
+    }
+    data = std::make_shared<BasicIntegerType>(operand_A->data->log_len, operand_A->data->iobasic);
 }
 
 void ArithmeticAddNodeForInteger::generate_procedure() {
@@ -82,28 +96,5 @@ void ArithmeticAddNodeForInteger::generate_procedure() {
         return;
     } PUTILS_CATCH_THROW_GENERAL
 }
-
-/*
-void ArithmeticAddNodeForInteger::ArithmeticAddTaskForInteger::allocate_data() {
-    if (target_C != nullptr) {
-        return;
-    }
-    if (source_A == nullptr || source_B == nullptr) {
-        throw PUTILS_GENERAL_EXCEPTION("Predecessor node data is not constructed.", "DAG construction error");
-    }
-    if (source_A->len != source_B->len) {
-        std::stringstream ss;
-        ss << "Node data length mismatch: (" << source_A->len << ") can not match (" << source_B->len << ")!";
-        throw PUTILS_GENERAL_EXCEPTION(ss.str(), "DAG construction error");
-    }
-    if (source_A->iobasic != source_B->iobasic) {
-        std::stringstream ss;
-        ss << "Node data iobasic mismatch: (" << iofun::base_name(source_A->iobasic) << ") can not match (" << iofun::base_name(source_B->iobasic) << ")!";
-        throw PUTILS_GENERAL_EXCEPTION(ss.str(), "DAG construction error");
-    }
-    target_C = std::make_shared<BasicIntegerType>(source_A->log_len, source_A->iobasic);
-    return;
-}
-*/
 
 }
