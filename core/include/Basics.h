@@ -81,6 +81,9 @@ struct BasicIntegerType {
  *          during graph construction phase before execution begins.
  */
 
+template<typename Sychronizer>
+struct sychronizer_type_traits;
+
 struct BasicComputeUnitType {
     using FuncList = std::vector<std::function<void()>>;
     FuncList forward_calls;
@@ -97,6 +100,7 @@ struct BasicComputeUnitType {
     virtual void dependency_notice();
     virtual void forward();
     virtual void add_dependency(BasicComputeUnitType& predecessor);
+    virtual const char* get_acceptance() const noexcept;
 };
 
 template<typename DependencySynchronizerType>
@@ -166,7 +170,7 @@ struct ParallelizableUnit: public BasicComputeUnitType {
             #ifdef MPENGINE_STORE_PROCEDURE_DETAILS
                 std::ostringstream oss;
                 oss << "ParallelizableUnit[" << reinterpret_cast<uintptr_t>(this) << "]:dependency_notice";
-                forward_detas.emplace_back(oss.str());
+                predecessor.forward_detas.emplace_back(oss.str());
             #endif
         } PUTILS_CATCH_THROW_GENERAL
         return;
@@ -176,6 +180,9 @@ struct ParallelizableUnit: public BasicComputeUnitType {
         task_list.emplace_back(putils::wrap_task([callable, this] { callable(); forward(); }));
         forward_synchronizer.fetch_add(1, std::memory_order_acq_rel);
         return;
+    }
+    const char* get_acceptance() const noexcept override {
+        return sychronizer_type_traits<DependencySynchronizerType>::value;
     }
 };
 
@@ -236,7 +243,7 @@ struct MonoUnit: public BasicComputeUnitType {
             #ifdef MPENGINE_STORE_PROCEDURE_DETAILS
                 std::ostringstream oss;
                 oss << "MonoUnit[" << reinterpret_cast<uintptr_t>(this) << "]:dependency_notice";
-                forward_detas.emplace_back(oss.str());
+                predecessor.forward_detas.emplace_back(oss.str());
             #endif
         } PUTILS_CATCH_THROW_GENERAL
         return;
@@ -249,6 +256,9 @@ struct MonoUnit: public BasicComputeUnitType {
             throw PUTILS_GENERAL_EXCEPTION("Single task unit has duplicate task initialization!", "compute unit error");
         }
         return;
+    }
+    const char* get_acceptance() const noexcept override {
+        return sychronizer_type_traits<DependencySynchronizerType>::value;
     }
 };
 
@@ -283,6 +293,16 @@ struct MonoSynchronizer {
         flag = true;
         return;
     }
+};
+
+template<>
+struct sychronizer_type_traits<MultiTaskSynchronizer> {
+    static constexpr const char* value = "[Accept multiple predecessors]";
+};
+
+template<>
+struct sychronizer_type_traits<MonoSynchronizer> {
+    static constexpr const char* value = "[Accept unique predecessor]";
 };
 
 template<typename FinalSynchronizer = std::latch>

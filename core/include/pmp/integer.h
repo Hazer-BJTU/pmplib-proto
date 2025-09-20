@@ -17,6 +17,8 @@ private:
     IntegerDAGContext(const std::shared_ptr<Field>& field);
     friend Field;
     friend IntegerVarReference;
+    friend void collect_graph_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
+    friend void collect_proce_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
 public:
     IntegerDAGContext(size_t precision, IOBasic iobasic);
     ~IntegerDAGContext();
@@ -42,9 +44,9 @@ private:
     std::unique_ptr<Field> field;
     friend Field;
     friend IntegerDAGContext;
-    friend std::ostream& operator << (std::ostream& stream, const IntegerVarReference& integer_ref) noexcept;
     friend void collect_graph_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
     friend void collect_proce_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
+    friend std::ostream& operator << (std::ostream& stream, const IntegerVarReference& integer_ref) noexcept;
     friend IntegerVarReference operator + (IntegerVarReference& integer_A, IntegerVarReference& integer_B);
 public:
     IntegerVarReference(const char* integer_str, IntegerDAGContext& context);

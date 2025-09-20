@@ -29,10 +29,6 @@ struct IntegerVarReference::Field {
     const SignatureIt signit;
 };
 
-void collect_graph_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
-
-void collect_proce_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
-
 bool nodes_topological_sort(IntegerDAGContext::Field::NodeHandles& node_handle_list) noexcept;
 
 IntegerDAGContext::IntegerDAGContext(size_t precesion, IOBasic iobasic) {
@@ -309,17 +305,17 @@ void collect_graph_details(std::ostream& stream, const std::shared_ptr<IntegerDA
             stn::beg_field("procedure");
                 stn::beg_list("node_list");
                     idx = 0;
-                    std::set<uintptr_t> procedure_index;
+                    std::set<uintptr_t> unit_index;
                     for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
                         for (auto jt = (*it)->procedure.begin(); jt != (*it)->procedure.end(); jt++) {
-                            procedure_index.insert(reinterpret_cast<uintptr_t>(jt->get()));
+                            unit_index.insert(reinterpret_cast<uintptr_t>(jt->get()));
                         }
                     }
-                    for (auto it = procedure_index.begin(); it != procedure_index.end(); it++) {
+                    for (auto it = unit_index.begin(); it != unit_index.end(); it++) {
                         idx++;
                         stn::beg_field();
                             stn::entry("index", *it);
-                            stn::entry("label", (std::ostringstream() << "proc#" << idx).str());
+                            stn::entry("label", (std::ostringstream() << "unit#" << idx).str());
                         stn::end_field();
                     }
                 stn::end_list();
@@ -381,7 +377,7 @@ void collect_graph_details(std::ostream& stream, const std::shared_ptr<IntegerDA
                     stn::entry("edge_color", "blue");
                 stn::end_field();
             stn::end_field();
-            stn::beg_field("procedures_procedures");
+            stn::beg_field("units_units");
                 stn::beg_list("edge_list");
                     for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
                         for (auto jt = (*it)->procedure.begin(); jt != (*it)->procedure.end(); jt++) {
@@ -422,7 +418,33 @@ void collect_graph_details(std::ostream& stream, const std::shared_ptr<IntegerDA
 }
 
 void collect_proce_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept {
-    stream << "TO DO..." << std::endl;
+    std::set<uintptr_t> unit_index;
+    for (auto it = field->nodes.begin(); it != field->nodes.end(); it++) {
+        for (auto jt = (*it)->procedure.begin(); jt != (*it)->procedure.end(); jt++) {
+            unit_index.insert(reinterpret_cast<uintptr_t>(jt->get()));
+        }
+    }
+    size_t idx = 0;
+    stn::beg_notation();
+        stn::beg_list("compute_units");
+            for (uintptr_t intptr: unit_index) {
+                idx++;
+                auto unit_ptr = reinterpret_cast<BasicComputeUnitType*>(intptr);
+                stn::beg_field();
+                    stn::entry("name", (std::ostringstream() << "unit#" << idx).str());
+                    stn::entry("index", intptr);
+                    stn::entry("dependency_type", unit_ptr->get_acceptance());
+                    #ifdef MPENGINE_STORE_PROCEDURE_DETAILS
+                        stn::beg_list("forward_details");
+                            for (auto it = unit_ptr->forward_detas.begin(); it != unit_ptr->forward_detas.end(); it++) {
+                                stn::entry(*it);
+                            }
+                        stn::end_list();
+                    #endif
+                stn::end_field();
+            }
+        stn::end_list();
+    stn::end_notation(stream);
     return;
 }
 

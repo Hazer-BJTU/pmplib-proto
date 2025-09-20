@@ -1,13 +1,16 @@
+#!/bin/bash
+
 rm -rf bin/*
 touch bin/.bin
 rm -rf build/*
 touch build/.build
 rm -rf lib/*
 touch lib/.lib
+
 cmake -B build \
 -DUSE_CUPMP=OFF \
 -DGENERATE_TEST_TARGETS=ON \
--DBUILD_RELEASE=ON \
+-DBUILD_RELEASE=OFF \
 -DENABLE_PUTILS_GENERAL_EXCEPTION_KNOWN_ONLY=ON \
 -DENABLE_PUTILS_MEMORY_LEAK_CHECK=OFF \
 -DENABLE_PUTILS_THREADPOOL_WORKSTEALING_OPTIMIZATION=ON \
@@ -17,3 +20,5 @@ cmake -B build \
 -DENABLE_MPENGINE_GRAPHV_DEBUG_OPTION=ON \
 -DENABLE_MPENGINE_STORE_PROCEDURE_DETAILS=ON
 cmake --build build -j$(nproc)
+
+export PATH=$(pwd)/bin/pytools:$PATH

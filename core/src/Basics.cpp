@@ -73,6 +73,10 @@ void BasicComputeUnitType::forward() {}
 
 void BasicComputeUnitType::add_dependency(BasicComputeUnitType& predecessor) {}
 
+const char* BasicComputeUnitType::get_acceptance() const noexcept {
+    return "[Starting unit, no predecessor]";
+}
+
 BasicNodeType::BasicNodeType(): data(nullptr), nexts(), procedure() {}
 
 BasicNodeType::~BasicNodeType() {}
