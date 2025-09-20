@@ -12,7 +12,7 @@ prompt() {
     echo "[--option-workstealing]          <ON/OFF> : only for debug use; OFF is recommended."
     echo "[--option-load-config]           <ON/OFF> : If you want to load configurations from specified source, set it to OFF. ON is recommended."
     echo "[--option-fsm-overload]          <ON/OFF> : Set it to OFF."
-    echo "[--option-thead-binding]         <ON/OFF> : Setting this option to ON may result in a deeper call stack. Pay attention to the computation scale. ON is recommended."
+    echo "[--option-thread-binding]         <ON/OFF> : Setting this option to ON may result in a deeper call stack. Pay attention to the computation scale. ON is recommended."
     echo "[--option-graphv-debug]          <ON/OFF> : Set it to ON if you want to export & visualize computational DAG."
     echo "[--option-procedure-details]     <ON/OFF> : Set it to ON if you have enabled --option-graphv-debug."
 }
@@ -110,7 +110,7 @@ cmake -B build \
 -DENABLE_MPENGINE_CONFIG_LOAD_DEFAULT="$ENABLE_MPENGINE_CONFIG_LOAD_DEFAULT" \
 -DENABLE_MPENGINE_FSM_IMPLICIT_OVERLOAD="$ENABLE_MPENGINE_FSM_IMPLICIT_OVERLOAD" \
 -DENABLE_MPENGINE_THREAD_BINDING_OPTIMIZATION="$ENABLE_MPENGINE_THREAD_BINDING_OPTIMIZATION" \
--DENABLE_MPENGINE_GRAPHV_DEBUG_OPTION=ON="$ENABLE_MPENGINE_GRAPHV_DEBUG_OPTION" \
+-DENABLE_MPENGINE_GRAPHV_DEBUG_OPTION="$ENABLE_MPENGINE_GRAPHV_DEBUG_OPTION" \
 -DENABLE_MPENGINE_STORE_PROCEDURE_DETAILS="$ENABLE_MPENGINE_STORE_PROCEDURE_DETAILS"
 
 cmake --build build -j"$THREAD_COUNT"
