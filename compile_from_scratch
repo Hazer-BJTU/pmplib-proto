@@ -9,7 +9,7 @@ prompt() {
     echo "[-j|--threads]      <int>    {\$(nproc) by default} : number of compile workers"
     echo "[--option-exception-known-only]  <ON/OFF> : only keep known symbols in traceback; ON is recommended."
     echo "[--option-leak-check]            <ON/OFF> : Memory pool leak check that may cause performance degradation. OFF is recommended."
-    echo "[--option-workstealing]          <ON/OFF> : only for debug use; OFF is recommended."
+    echo "[--option-workstealing]          <ON/OFF> : only for debug use; ON is recommended."
     echo "[--option-load-config]           <ON/OFF> : If you want to load configurations from specified source, set it to OFF. ON is recommended."
     echo "[--option-fsm-overload]          <ON/OFF> : Set it to OFF."
     echo "[--option-thread-binding]         <ON/OFF> : Setting this option to ON may result in a deeper call stack. Pay attention to the computation scale. ON is recommended."
