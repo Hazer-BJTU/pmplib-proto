@@ -12,7 +12,7 @@ prompt() {
     echo "[--option-workstealing]          <ON/OFF> : only for debug use; ON is recommended."
     echo "[--option-load-config]           <ON/OFF> : If you want to load configurations from specified source, set it to OFF. ON is recommended."
     echo "[--option-fsm-overload]          <ON/OFF> : Set it to OFF."
-    echo "[--option-thread-binding]         <ON/OFF> : Setting this option to ON may result in a deeper call stack. Pay attention to the computation scale. ON is recommended."
+    echo "[--option-thread-binding]        <ON/OFF> : Setting this option to ON may result in a deeper call stack. Pay attention to the computation scale. ON is recommended."
     echo "[--option-graphv-debug]          <ON/OFF> : Set it to ON if you want to export & visualize computational DAG."
     echo "[--option-procedure-details]     <ON/OFF> : Set it to ON if you have enabled --option-graphv-debug."
 }
