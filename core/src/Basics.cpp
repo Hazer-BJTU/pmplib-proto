@@ -77,6 +77,10 @@ const char* BasicComputeUnitType::get_acceptance() const noexcept {
     return "[Starting unit, no predecessor]";
 }
 
+const char* BasicComputeUnitType::get_type() const noexcept {
+    return "(Basic)";
+}
+
 BasicNodeType::BasicNodeType(): data(nullptr), nexts(), procedure() {}
 
 BasicNodeType::~BasicNodeType() {}

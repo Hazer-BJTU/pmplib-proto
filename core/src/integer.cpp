@@ -433,13 +433,20 @@ void collect_proce_details(std::ostream& stream, const std::shared_ptr<IntegerDA
                 stn::beg_field();
                     stn::entry("name", (std::ostringstream() << "unit#" << idx).str());
                     stn::entry("index", intptr);
+                    stn::entry("type", unit_ptr->get_type());
                     stn::entry("dependency_type", unit_ptr->get_acceptance());
                     #ifdef MPENGINE_STORE_PROCEDURE_DETAILS
-                        stn::beg_list("forward_details");
-                            for (auto it = unit_ptr->forward_detas.begin(); it != unit_ptr->forward_detas.end(); it++) {
-                                stn::entry(*it);
-                            }
-                        stn::end_list();
+                        if (unit_ptr->forward_detas.size() != 0) {
+                            stn::beg_list("forward_details");
+                                for (auto it = unit_ptr->forward_detas.begin(); it != unit_ptr->forward_detas.end(); it++) {
+                                    stn::entry(*it);
+                                }
+                            stn::end_list();
+                        } else {
+                            stn::entry("forward_details", "empty");
+                        }
+                    #else
+                        stn::entry("forward_details_disabled", true);
                     #endif
                 stn::end_field();
             }

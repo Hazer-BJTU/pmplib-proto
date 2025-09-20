@@ -2,10 +2,11 @@
 
 prompt() {
     echo "Build options: "
-    echo "[-c|--use-cupmp]    <flag>   {off by default}   : enable cupmp lib"
+    echo "[-h|--help]         <flag>   {off by default}   : show help"
+    echo "[-c|--use-cupmp]    <flag>   {off by default}   : enable lib cupmp"
     echo "[-t|--test-targets] <flag>   {off by default}   : generate test targets"
     echo "[-r|--release]      <flag>   {off by default}   : build release"
-    echo "[-j|--threads]      <int>    {nproc by default} : number of compile workers"
+    echo "[-j|--threads]      <int>    {\$(nproc) by default} : number of compile workers"
     echo "[--option-exception-known-only]  <ON/OFF> : only keep known symbols in traceback; ON is recommended."
     echo "[--option-leak-check]            <ON/OFF> : Memory pool leak check that may cause performance degradation. OFF is recommended."
     echo "[--option-workstealing]          <ON/OFF> : only for debug use; OFF is recommended."

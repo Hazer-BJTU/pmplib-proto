@@ -101,6 +101,7 @@ struct BasicComputeUnitType {
     virtual void forward();
     virtual void add_dependency(BasicComputeUnitType& predecessor);
     virtual const char* get_acceptance() const noexcept;
+    virtual const char* get_type() const noexcept;
 };
 
 template<typename DependencySynchronizerType>
@@ -184,6 +185,9 @@ struct ParallelizableUnit: public BasicComputeUnitType {
     const char* get_acceptance() const noexcept override {
         return sychronizer_type_traits<DependencySynchronizerType>::value;
     }
+    const char* get_type() const noexcept override {
+        return "(Parallelizable)";
+    }
 };
 
 /**
@@ -259,6 +263,9 @@ struct MonoUnit: public BasicComputeUnitType {
     }
     const char* get_acceptance() const noexcept override {
         return sychronizer_type_traits<DependencySynchronizerType>::value;
+    }
+    const char* get_type() const noexcept override {
+        return "(Mono)";
     }
 };
 
