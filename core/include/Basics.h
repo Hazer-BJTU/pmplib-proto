@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <string.h>
 
+#include "StructuredNotation.hpp"
 #include "FiniteStateMachine.hpp"
 #include "MemoryAllocator.h"
 #include "GlobalConfig.h"
@@ -57,6 +58,7 @@ struct BasicIntegerType {
     virtual void allocate();
     ElementType* get_pointer() const noexcept;
     ElementType* get_ensured_pointer();
+    const char* get_status() const noexcept;
 };
 
 /**
@@ -85,6 +87,7 @@ template<typename Sychronizer>
 struct sychronizer_type_traits;
 
 struct BasicComputeUnitType {
+    using TaskPtr = putils::ThreadPool::TaskPtr;
     using FuncList = std::vector<std::function<void()>>;
     FuncList forward_calls;
 #ifdef MPENGINE_STORE_PROCEDURE_DETAILS
@@ -100,8 +103,10 @@ struct BasicComputeUnitType {
     virtual void dependency_notice();
     virtual void forward();
     virtual void add_dependency(BasicComputeUnitType& predecessor);
+    virtual void add_task(const TaskPtr& task_ptr);
     virtual const char* get_acceptance() const noexcept;
     virtual const char* get_type() const noexcept;
+    virtual void generate_task_stn() const noexcept;
 };
 
 template<typename DependencySynchronizerType>
@@ -176,6 +181,11 @@ struct ParallelizableUnit: public BasicComputeUnitType {
         } PUTILS_CATCH_THROW_GENERAL
         return;
     }
+    void add_task(const TaskPtr& task_ptr) override {
+        task_list.emplace_back(task_ptr);
+        forward_synchronizer.fetch_add(1, std::memory_order_acq_rel);
+        return;
+    }
     template<typename Callable>
     void add_task_from_outer(Callable&& callable) noexcept {
         task_list.emplace_back(putils::wrap_task([callable, this] { callable(); forward(); }));
@@ -187,6 +197,14 @@ struct ParallelizableUnit: public BasicComputeUnitType {
     }
     const char* get_type() const noexcept override {
         return "(Parallelizable)";
+    }
+    void generate_task_stn() const noexcept override {
+        stn::beg_list("task_descriptions");
+            for (const auto& task: task_list) {
+                stn::entry(task->description());
+            }
+        stn::end_list();
+        return;
     }
 };
 
@@ -252,6 +270,14 @@ struct MonoUnit: public BasicComputeUnitType {
         } PUTILS_CATCH_THROW_GENERAL
         return;
     }
+    void add_task(const TaskPtr& task_ptr) override {
+        if (task == nullptr) {
+            task = task_ptr;
+        } else {
+            throw PUTILS_GENERAL_EXCEPTION("Single task unit has duplicate task initialization!", "compute unit error");
+        }
+        return;
+    }
     template<typename Callable>
     void add_task_from_outer(Callable&& callable) {
         if (task == nullptr) {
@@ -266,6 +292,10 @@ struct MonoUnit: public BasicComputeUnitType {
     }
     const char* get_type() const noexcept override {
         return "(Mono)";
+    }
+    void generate_task_stn() const noexcept override {
+        stn::entry("task_descriptions", task->description());
+        return;
     }
 };
 

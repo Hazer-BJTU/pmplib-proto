@@ -5,10 +5,16 @@ namespace mpengine {
 ArithmeticAddNodeForInteger::ArithmeticAddTaskForInteger::ArithmeticAddTaskForInteger(
     const DataHandle& source_A,
     const DataHandle& source_B,
-    const DataHandle& source_C
+    const DataHandle& target_C,
+    const ComputeUnitPtr curr_unit
 ): source_A(source_A), 
    source_B(source_B), 
-   target_C(target_C) {}
+   target_C(target_C),
+   curr_unit(curr_unit) { 
+    if (curr_unit == nullptr) {
+        throw PUTILS_GENERAL_EXCEPTION("Unable to bind a task to compute unit pointer (nullptr)!", "DAG construction error");
+    }  
+}
 
 void ArithmeticAddNodeForInteger::ArithmeticAddTaskForInteger::run() {
     BasicIntegerType::ElementType* data_A = source_A->get_ensured_pointer();
@@ -50,18 +56,16 @@ void ArithmeticAddNodeForInteger::ArithmeticAddTaskForInteger::run() {
     if (flag) {
         putils::RuntimeLog::get_global_log().add("(Runtime computations): Unexpected integer calculation overflow occurred!", putils::RuntimeLog::Level::WARN);
     }
+    source_A.reset();
+    source_B.reset();
+    curr_unit->forward();
     return;
 }
 
 std::string ArithmeticAddNodeForInteger::ArithmeticAddTaskForInteger::description() const noexcept {
     std::stringstream ss;
     ss << "task[" << reinterpret_cast<uintptr_t>(this) << "]:arithmetic_add_integer:";
-    ss << "sources[" << reinterpret_cast<uintptr_t>(source_A.get()) << "," << reinterpret_cast<uintptr_t>(source_B.get()) << "],";
-    if (target_C == nullptr) {
-        ss << "target[null_yet]";
-    } else {
-        ss << "target[" << reinterpret_cast<uintptr_t>(target_C.get()) << "]";
-    }
+    ss << "sources[" << source_A->get_status() << "," << source_B->get_status() << "],target[" << target_C->get_status() << "]";
     return ss.str();
 }
 
@@ -89,7 +93,7 @@ ArithmeticAddNodeForInteger::ArithmeticAddNodeForInteger(NodeHandle& node_A, Nod
 void ArithmeticAddNodeForInteger::generate_procedure() {
     try {
         auto compute_unit_ptr = std::make_unique<MonoUnit<MultiTaskSynchronizer>>();
-        compute_unit_ptr->task = std::make_shared<ArithmeticAddTaskForInteger>(operand_A->data, operand_B->data, data);
+        compute_unit_ptr->add_task(std::make_shared<ArithmeticAddTaskForInteger>(operand_A->data, operand_B->data, data, compute_unit_ptr.get()));
         compute_unit_ptr->add_dependency(operand_A->get_procedure_port());
         compute_unit_ptr->add_dependency(operand_B->get_procedure_port());
         procedure.emplace_back(std::move(compute_unit_ptr));

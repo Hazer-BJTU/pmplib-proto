@@ -14,7 +14,7 @@ struct StructuredNotation {
     std::ostringstream oss;
 };
 
-thread_local StructuredNotation structured_notation;
+inline thread_local StructuredNotation structured_notation;
 
 inline void beg_notation() noexcept {
     structured_notation.comma_flag = false;

@@ -63,6 +63,14 @@ BasicIntegerType::ElementType* BasicIntegerType::get_ensured_pointer() {
     return data->get<ElementType>();
 }
 
+const char* BasicIntegerType::get_status() const noexcept {
+    if (data == nullptr) {
+        return "null_yet";
+    } else {
+        return "allocated";
+    }
+}
+
 BasicComputeUnitType::BasicComputeUnitType(): forward_calls() {}
 
 BasicComputeUnitType::~BasicComputeUnitType() {}
@@ -73,12 +81,19 @@ void BasicComputeUnitType::forward() {}
 
 void BasicComputeUnitType::add_dependency(BasicComputeUnitType& predecessor) {}
 
+void BasicComputeUnitType::add_task(const TaskPtr& task_ptr) {}
+
 const char* BasicComputeUnitType::get_acceptance() const noexcept {
     return "[Starting unit, no predecessor]";
 }
 
 const char* BasicComputeUnitType::get_type() const noexcept {
     return "(Basic)";
+}
+
+void BasicComputeUnitType::generate_task_stn() const noexcept {
+    stn::entry("task_descriptions", "empty");
+    return;
 }
 
 BasicNodeType::BasicNodeType(): data(nullptr), nexts(), procedure() {}

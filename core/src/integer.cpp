@@ -435,6 +435,7 @@ void collect_proce_details(std::ostream& stream, const std::shared_ptr<IntegerDA
                     stn::entry("index", intptr);
                     stn::entry("type", unit_ptr->get_type());
                     stn::entry("dependency_type", unit_ptr->get_acceptance());
+                    unit_ptr->generate_task_stn();
                     #ifdef MPENGINE_STORE_PROCEDURE_DETAILS
                         if (unit_ptr->forward_detas.size() != 0) {
                             stn::beg_list("forward_details");
