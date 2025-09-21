@@ -23,6 +23,12 @@ int main() {
     unit_5->add_task_from_outer([&logger] { logger.add("unit_5"); });
     auto unit_6 = make_mono_mono;
     unit_6->add_task_from_outer([&logger] { logger.add("unit_6"); });
+    auto unit_7 = make_mono_mono;
+    unit_7->add_task_from_outer([&logger] { logger.add("unit_7"); });
+    auto unit_8 = make_mono_mono;
+    unit_8->add_task_from_outer([&logger] { logger.add("unit_8"); });
+    auto unit_9 = make_mono_mono;
+    unit_9->add_task_from_outer([&logger] { logger.add("unit_9"); });
     std::latch final_synchronizer{1};
     unit_1->add_dependency(*unit_0);
     unit_2->add_dependency(*unit_1);
@@ -30,9 +36,14 @@ int main() {
     unit_4->add_dependency(*unit_3);
     unit_5->add_dependency(*unit_4);
     unit_6->add_dependency(*unit_5);
-    std::latch synchronizer{1};
-    mpengine::add_dependency(synchronizer, *unit_6);
-    unit_0->dependency_notice();
+    unit_7->add_dependency(*unit_6);
+    unit_8->add_dependency(*unit_6);
+    unit_9->add_dependency(*unit_6);
+    std::latch synchronizer{3};
+    mpengine::add_dependency(synchronizer, *unit_7);
+    mpengine::add_dependency(synchronizer, *unit_8);
+    mpengine::add_dependency(synchronizer, *unit_9);
+    unit_0->dependency_notice(0);
     synchronizer.wait();
     return 0;
 }

@@ -358,7 +358,7 @@ struct sychronizer_type_traits<MonoSynchronizer> {
 
 template<typename FinalSynchronizer = std::latch>
 void add_dependency(FinalSynchronizer& synchronizer, BasicComputeUnitType& predecessor) noexcept {
-    predecessor.forward_calls.emplace_back([&synchronizer] { synchronizer.count_down(); });
+    predecessor.forward_calls.emplace_back([&synchronizer] (int signal) { synchronizer.count_down(); });
     return;
 }
 

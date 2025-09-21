@@ -435,6 +435,13 @@ void collect_proce_details(std::ostream& stream, const std::shared_ptr<IntegerDA
                     stn::entry("index", intptr);
                     stn::entry("type", unit_ptr->get_type());
                     stn::entry("dependency_type", unit_ptr->get_acceptance());
+                    if (unit_ptr->forward_calls.size() == 0) {
+                        stn::entry("forward_signal", "NO_FORWARDS");
+                    } else if (unit_ptr->forward_calls.size() == 1) {
+                        stn::entry("forward_signal", "SERIALIZE_SIGNAL");
+                    } else {
+                        stn::entry("forward_signal", "DEFAULT_SIGNAL");
+                    }
                     unit_ptr->generate_task_stn();
                     #ifdef MPENGINE_STORE_PROCEDURE_DETAILS
                         if (unit_ptr->forward_detas.size() != 0) {
