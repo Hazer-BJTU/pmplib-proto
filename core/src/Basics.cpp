@@ -75,7 +75,7 @@ BasicComputeUnitType::BasicComputeUnitType(): forward_calls() {}
 
 BasicComputeUnitType::~BasicComputeUnitType() {}
 
-void BasicComputeUnitType::dependency_notice() {}
+void BasicComputeUnitType::dependency_notice(int signal) {}
 
 void BasicComputeUnitType::forward() {}
 

@@ -16,6 +16,12 @@
 
 namespace mpengine {
 
+#ifdef MPENGINE_THREAD_BINDING_OPTIMIZATION
+inline constexpr const bool thread_binding_optimization = true;
+#else
+inline constexpr const bool thread_binding_optimization = false;
+#endif
+
 /**
  * @class BasicIntegerType
  * @brief A high-precision integer type that stores data in large base for efficiency.
@@ -88,7 +94,9 @@ struct sychronizer_type_traits;
 
 struct BasicComputeUnitType {
     using TaskPtr = putils::ThreadPool::TaskPtr;
-    using FuncList = std::vector<std::function<void()>>;
+    using FuncList = std::vector<std::function<void(int)>>;
+    static constexpr const int DEFAULT_SIGNAL = 0;
+    static constexpr const int SERIALIZE_SIGNAL = 1;
     FuncList forward_calls;
 #ifdef MPENGINE_STORE_PROCEDURE_DETAILS
     using DetaList = std::vector<std::string>;
@@ -100,7 +108,7 @@ struct BasicComputeUnitType {
     BasicComputeUnitType& operator = (const BasicComputeUnitType&) = default;
     BasicComputeUnitType(BasicComputeUnitType&&) = default;
     BasicComputeUnitType& operator = (BasicComputeUnitType&&) = default;
-    virtual void dependency_notice();
+    virtual void dependency_notice(int signal);
     virtual void forward();
     virtual void add_dependency(BasicComputeUnitType& predecessor);
     virtual void add_task(const TaskPtr& task_ptr);
@@ -151,7 +159,7 @@ struct ParallelizableUnit: public BasicComputeUnitType {
         dependency_synchronizer.initialize_as_zero();
     };
     ~ParallelizableUnit() override = default;
-    void dependency_notice() override {
+    void dependency_notice(int signal) override {
         try {
             if (dependency_synchronizer.ready()) {
                 putils::ThreadPool::get_global_threadpool().submit(task_list);
@@ -161,17 +169,21 @@ struct ParallelizableUnit: public BasicComputeUnitType {
     }
     void forward() override {
         if (forward_synchronizer.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-            for (auto& forward_call: forward_calls) {
-                try {
-                    forward_call();
-                } PUTILS_CATCH_THROW_GENERAL
+            if (forward_calls.size() == 1) {
+                forward_calls.front()(SERIALIZE_SIGNAL);
+            } else {
+                for (auto& forward_call: forward_calls) {
+                    try {
+                        forward_call(DEFAULT_SIGNAL);
+                    } PUTILS_CATCH_THROW_GENERAL
+                }
             }
         }
         return;
     }
     void add_dependency(BasicComputeUnitType& predecessor) override {
         try {
-            predecessor.forward_calls.emplace_back([this] { try { dependency_notice(); } PUTILS_CATCH_THROW_GENERAL });
+            predecessor.forward_calls.emplace_back([this] (int signal) { try { dependency_notice(signal); } PUTILS_CATCH_THROW_GENERAL });
             dependency_synchronizer.increment();
             #ifdef MPENGINE_STORE_PROCEDURE_DETAILS
                 std::ostringstream oss;
@@ -238,29 +250,31 @@ struct MonoUnit: public BasicComputeUnitType {
         dependency_synchronizer.initialize_as_zero();
     };
     ~MonoUnit() override = default;
-    void dependency_notice() override {
+    void dependency_notice(int signal) override {
         try {
-            if (dependency_synchronizer.ready()) {
-                #ifdef MPENGINE_THREAD_BINDING_OPTIMIZATION
-                    task->run();
-                #else
-                    putils::ThreadPool::get_global_threadpool().submit(task);
-                #endif
+            if (signal == SERIALIZE_SIGNAL && thread_binding_optimization) {
+                task->run();
+            } else {
+                putils::ThreadPool::get_global_threadpool().submit(task);
             }
         } PUTILS_CATCH_THROW_GENERAL
         return;
     }
     void forward() override {
-        for (auto& forward_call: forward_calls) {
-            try {
-                forward_call();
-            } PUTILS_CATCH_THROW_GENERAL
+        if (forward_calls.size() == 1) {
+            forward_calls.front()(SERIALIZE_SIGNAL);
+        } else {
+            for (auto& forward_call: forward_calls) {
+                try {
+                    forward_call(DEFAULT_SIGNAL);
+                } PUTILS_CATCH_THROW_GENERAL
+            }
         }
         return;
     }
     void add_dependency(BasicComputeUnitType& predecessor) override {
         try {
-            predecessor.forward_calls.emplace_back([this] { try { dependency_notice(); } PUTILS_CATCH_THROW_GENERAL });
+            predecessor.forward_calls.emplace_back([this] (int signal) { try { dependency_notice(signal); } PUTILS_CATCH_THROW_GENERAL });
             dependency_synchronizer.increment();
             #ifdef MPENGINE_STORE_PROCEDURE_DETAILS
                 std::ostringstream oss;
