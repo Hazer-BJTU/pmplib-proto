@@ -37,6 +37,8 @@ private:
     void generate_procedures();
     void await_pipeline_accomplish();
     void clean_up();
+public:
+    void update();
 };
 
 class IntegerVarReference {
@@ -58,7 +60,7 @@ public:
     IntegerVarReference& operator = (const IntegerVarReference& integer_ref);
     IntegerVarReference(IntegerVarReference&& integer_ref);
     IntegerVarReference& operator = (IntegerVarReference&& integer_ref);
-    IntegerDAGContext get_context();
+    IntegerDAGContext get_context() const;
 };
 
 }

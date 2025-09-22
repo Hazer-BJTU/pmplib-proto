@@ -18,6 +18,7 @@ struct IntegerDAGContext::Field {
     NodeHandles nodes;
     size_t log_len;
     IOBasic iobasic;
+    bool need_update;
 };
 
 struct IntegerVarReference::Field {
@@ -36,7 +37,7 @@ IntegerDAGContext::IntegerDAGContext(size_t precesion, IOBasic iobasic) {
         IntegerDAGContext::Field::Signatures(),
         IntegerDAGContext::Field::NodeHandles(),
         iofun::precision_to_log_len(precesion, iobasic),
-        iobasic
+        iobasic, false
     );
 }
 
@@ -188,6 +189,18 @@ void IntegerDAGContext::clean_up() {
     return;
 }
 
+void IntegerDAGContext::update() {
+    if (field->need_update) {
+        try {
+            generate_procedures();
+            await_pipeline_accomplish();
+            clean_up();
+        } PUTILS_CATCH_THROW_GENERAL
+        field->need_update = false;
+    }
+    return;
+}
+
 IntegerVarReference::IntegerVarReference(const char* integer_str, IntegerDAGContext& context) {
     std::string_view integer_view(integer_str);
     auto node = std::make_shared<ConstantNode>(context.field->log_len, context.field->iobasic);
@@ -271,7 +284,7 @@ IntegerVarReference& IntegerVarReference::operator = (IntegerVarReference&& inte
     return *this;
 }
 
-IntegerDAGContext IntegerVarReference::get_context() {
+IntegerDAGContext IntegerVarReference::get_context() const {
     if (field == nullptr) {
         throw PUTILS_GENERAL_EXCEPTION("Unable to acquire context of a released integer object.", "integer reference error");
     }
@@ -279,6 +292,7 @@ IntegerDAGContext IntegerVarReference::get_context() {
 }
 
 std::ostream& operator << (std::ostream& stream, const IntegerVarReference& integer_ref) noexcept {
+    integer_ref.get_context().update();
     parse_integer_to_stream(stream, *(integer_ref.field->node->data));
     return stream;
 }
@@ -559,6 +573,7 @@ IntegerVarReference operator + (IntegerVarReference& integer_A, IntegerVarRefere
         integer_A.field->node, integer_B.field->node
     );
     context_ptr->nodes.emplace_back(integer_result.field->node);
+    context_ptr->need_update = true;
     return integer_result;
 }
 
