@@ -1,8 +1,5 @@
 #include <vector>
-
 #include "pmp/integer.h"
-
-#include "MemoryAllocator.h"
 
 int main() {
     pmp::context context(1000, pmp::io::hex);
@@ -13,7 +10,11 @@ int main() {
     for (size_t i = 2; i < 10; i++) {
         arr.push_back(arr[i - 1] + arr[i - 2]);
     }
+    pmp::integer c = arr[9], d = arr[6];
+    arr.clear();
     context.generate_procedures();
-    context.export_graph_details("/mnt/d/pmplib/others");
+    context.await_pipeline_accomplish();
+    context.clean_up();
+    std::cout << c << std::endl;
     return 0;
 }

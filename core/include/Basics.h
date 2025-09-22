@@ -252,10 +252,12 @@ struct MonoUnit: public BasicComputeUnitType {
     ~MonoUnit() override = default;
     void dependency_notice(int signal) override {
         try {
-            if (signal == SERIALIZE_SIGNAL && thread_binding_optimization) {
-                task->run();
-            } else {
-                putils::ThreadPool::get_global_threadpool().submit(task);
+            if (dependency_synchronizer.ready()) {
+                if (signal == SERIALIZE_SIGNAL && thread_binding_optimization) {
+                    task->run();
+                } else {
+                    putils::ThreadPool::get_global_threadpool().submit(task);
+                }
             }
         } PUTILS_CATCH_THROW_GENERAL
         return;
@@ -356,9 +358,20 @@ struct sychronizer_type_traits<MonoSynchronizer> {
     static constexpr const char* value = "[Accept unique predecessor]";
 };
 
-template<typename FinalSynchronizer = std::latch>
-void add_dependency(FinalSynchronizer& synchronizer, BasicComputeUnitType& predecessor) noexcept {
+// template<typename FinalSynchronizer = std::latch>
+inline void add_dependency(std::latch& synchronizer, BasicComputeUnitType& predecessor) noexcept {
     predecessor.forward_calls.emplace_back([&synchronizer] (int signal) { synchronizer.count_down(); });
+    return;
+}
+
+inline void add_dependency(std::atomic<size_t>& synchronizer, std::mutex& cv_lock, std::condition_variable& cv_block_main, BasicComputeUnitType& predecessor) noexcept {
+    predecessor.forward_calls.emplace_back([&synchronizer, &cv_lock, &cv_block_main] (int signal) {
+        if (synchronizer.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+            std::unique_lock<std::mutex> lock(cv_lock);
+            cv_block_main.notify_all();
+        }
+    });
+    synchronizer.fetch_add(1, std::memory_order_acq_rel);
     return;
 }
 

@@ -58,6 +58,7 @@ void ArithmeticAddNodeForInteger::ArithmeticAddTaskForInteger::run() {
     }
     source_A.reset();
     source_B.reset();
+    target_C.reset();
     curr_unit->forward();
     return;
 }
@@ -97,8 +98,8 @@ void ArithmeticAddNodeForInteger::generate_procedure() {
         compute_unit_ptr->add_dependency(operand_A->get_procedure_port());
         compute_unit_ptr->add_dependency(operand_B->get_procedure_port());
         procedure.emplace_back(std::move(compute_unit_ptr));
-        return;
     } PUTILS_CATCH_THROW_GENERAL
+    return;
 }
 
 }

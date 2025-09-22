@@ -163,9 +163,9 @@ public:
             it's unlikely for competing threads to be exactly one full cycle ahead of each other. */
         );
         //Complete node constructing.
+        qlen.fetch_add(1, std::memory_order_acq_rel);
         ring_buffer[current_tail].data = std::forward<Type>(data_ptr);
         ring_buffer[current_tail].ready.store(true, std::memory_order_release); //Ready for consume.
-        qlen.fetch_add(1, std::memory_order_acq_rel);
         return true;
     }
     template<class... Args>
@@ -198,9 +198,9 @@ public:
             //See try_push().
         );
         //Complete node clearing.
+        qlen.fetch_sub(1, std::memory_order_acq_rel);
         data_ptr = std::move(ring_buffer[current_head].data);
         ring_buffer[current_head].ready.store(false, std::memory_order_release); //Ready for produce.
-        qlen.fetch_sub(1, std::memory_order_acq_rel);
         return true;
     }
     bool empty() const noexcept {

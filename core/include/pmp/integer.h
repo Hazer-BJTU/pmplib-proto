@@ -35,6 +35,8 @@ private:
     void export_graph_details(const char* dir_base_path);
     void nodes_sort();
     void generate_procedures();
+    void await_pipeline_accomplish();
+    void clean_up();
 };
 
 class IntegerVarReference {

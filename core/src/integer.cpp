@@ -130,11 +130,61 @@ void IntegerDAGContext::nodes_sort() {
 }
 
 void IntegerDAGContext::generate_procedures() {
+    std::unordered_map<uintptr_t, bool> data_keep_flag;
     for (auto& node_handle: field->nodes) {
         try {
+            data_keep_flag[reinterpret_cast<uintptr_t>(node_handle.get())] = false;
             node_handle->generate_procedure();
         } PUTILS_CATCH_THROW_GENERAL
     }
+    for (auto var_ref_ptr: field->signatures) {
+        data_keep_flag[reinterpret_cast<uintptr_t>(var_ref_ptr->field->node.get())] = true;
+    }
+    for (auto& node_handle: field->nodes) {
+        if (!data_keep_flag[reinterpret_cast<uintptr_t>(node_handle.get())]) {
+            node_handle->data.reset();
+        }
+    }
+    return;
+}
+
+void IntegerDAGContext::await_pipeline_accomplish() {
+    std::mutex cv_lock;
+    std::atomic<size_t> synchronizer{0};
+    std::condition_variable cv_block_main;
+    BasicComputeUnitType::FuncList initial_calls;
+    for (auto& node_handle: field->nodes) {
+        for (auto it = node_handle->procedure.begin(); it != node_handle->procedure.end(); it++) {
+            if ((*it)->forward_calls.size() == 0) {
+                add_dependency(synchronizer, cv_lock, cv_block_main, *(*it));
+            }
+        }
+        auto const_node_handle = std::dynamic_pointer_cast<ConstantNode>(node_handle);
+        if (const_node_handle != nullptr) {
+            auto& unit_ptr = const_node_handle->procedure.front();
+            initial_calls.insert(initial_calls.end(), unit_ptr->forward_calls.begin(), unit_ptr->forward_calls.end());
+        }
+    }
+    for (auto& callable: initial_calls) {
+        callable(BasicComputeUnitType::DEFAULT_SIGNAL);
+    }
+    std::unique_lock<std::mutex> lock(cv_lock);
+    cv_block_main.wait(lock, [&synchronizer] { return synchronizer.load(std::memory_order_acquire) == 0; });
+    putils::ThreadPool::get_global_threadpool().shutdown();
+    return;
+}
+
+void IntegerDAGContext::clean_up() {
+    Field::NodeHandles new_nodes;
+    for (auto var_ref_ptr: field->signatures) {
+        if (var_ref_ptr->field->node->data == nullptr) {
+            throw PUTILS_GENERAL_EXCEPTION("Missing data field of a referenced node!", "post-processing error");
+        }
+        auto new_node = std::make_shared<ConstantNode>(*(var_ref_ptr->field->node));
+        var_ref_ptr->field->node = new_node;
+        new_nodes.push_back(new_node);
+    }
+    field->nodes = std::move(new_nodes);
     return;
 }
 
