@@ -10,6 +10,7 @@ prompt() {
     echo "[--option-exception-known-only]  <ON/OFF> : only keep known symbols in traceback; ON is recommended."
     echo "[--option-leak-check]            <ON/OFF> : Memory pool leak check that may cause performance degradation. OFF is recommended."
     echo "[--option-workstealing]          <ON/OFF> : only for debug use; ON is recommended."
+    echo "[--option-direct-mmap]           <ON/OFF> : Directly enable anonymous memory mapping when allocating large contiguous memory segments. ON is recommended."
     echo "[--option-load-config]           <ON/OFF> : If you want to load configurations from specified source, set it to OFF. ON is recommended."
     echo "[--option-fsm-overload]          <ON/OFF> : Set it to OFF."
     echo "[--option-thread-binding]        <ON/OFF> : Setting this option to ON may result in a deeper call stack. Pay attention to the computation scale. ON is recommended."
@@ -23,6 +24,7 @@ BUILD_RELEASE="OFF"
 ENABLE_PUTILS_GENERAL_EXCEPTION_KNOWN_ONLY="ON"
 ENABLE_PUTILS_MEMORY_LEAK_CHECK="OFF"
 ENABLE_PUTILS_THREADPOOL_WORKSTEALING_OPTIMIZATION="ON"
+ENABLE_PUTILS_DIRECT_MEMORY_MAPPER="ON"
 ENABLE_MPENGINE_CONFIG_LOAD_DEFAULT="ON"
 ENABLE_MPENGINE_FSM_IMPLICIT_OVERLOAD="OFF"
 ENABLE_MPENGINE_THREAD_BINDING_OPTIMIZATION="ON"
@@ -63,6 +65,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --option-workstealing)
             ENABLE_PUTILS_THREADPOOL_WORKSTEALING_OPTIMIZATION="$2"
+            shift 2
+            ;;
+        --option-direct-mmap)
+            ENABLE_PUTILS_DIRECT_MEMORY_MAPPER="$2"
             shift 2
             ;;
         --option-load-config)
@@ -107,6 +113,7 @@ cmake -B build \
 -DENABLE_PUTILS_GENERAL_EXCEPTION_KNOWN_ONLY="$ENABLE_PUTILS_GENERAL_EXCEPTION_KNOWN_ONLY" \
 -DENABLE_PUTILS_MEMORY_LEAK_CHECK="$ENABLE_PUTILS_MEMORY_LEAK_CHECK" \
 -DENABLE_PUTILS_THREADPOOL_WORKSTEALING_OPTIMIZATION="$ENABLE_PUTILS_THREADPOOL_WORKSTEALING_OPTIMIZATION" \
+-DENABLE_PUTILS_DIRECT_MEMORY_MAPPER="$ENABLE_PUTILS_DIRECT_MEMORY_MAPPER" \
 -DENABLE_MPENGINE_CONFIG_LOAD_DEFAULT="$ENABLE_MPENGINE_CONFIG_LOAD_DEFAULT" \
 -DENABLE_MPENGINE_FSM_IMPLICIT_OVERLOAD="$ENABLE_MPENGINE_FSM_IMPLICIT_OVERLOAD" \
 -DENABLE_MPENGINE_THREAD_BINDING_OPTIMIZATION="$ENABLE_MPENGINE_THREAD_BINDING_OPTIMIZATION" \

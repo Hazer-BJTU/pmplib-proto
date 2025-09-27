@@ -1,3 +1,11 @@
+/**
+ * @file Structured notation generation utilities
+ * @brief Provides thread-local structured notation builder for JSON-like output generation
+ * 
+ * @namespace mpengine::stn
+ * @brief Structured Notation namespace for generating hierarchical data formats
+ */
+
 #pragma once
 
 #include <sstream>
@@ -7,6 +15,15 @@
 #include <type_traits>
 
 namespace mpengine::stn {
+
+/**
+ * @brief Thread-local context for building structured notation output
+ * 
+ * Maintains the current state of notation generation including:
+ * - Comma placement tracking for proper JSON syntax
+ * - Indentation level for pretty-printing
+ * - Output string stream for accumulating the generated notation
+ */
 
 struct StructuredNotation {
     bool comma_flag;

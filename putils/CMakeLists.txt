@@ -7,6 +7,7 @@ init_compile_definition_option(PUTILS)
 add_compile_definition_option(PUTILS PUTILS_GENERAL_EXCEPTION_KNOWN_ONLY ON)
 add_compile_definition_option(PUTILS PUTILS_MEMORY_LEAK_CHECK OFF)
 add_compile_definition_option(PUTILS PUTILS_THREADPOOL_WORKSTEALING_OPTIMIZATION ON)
+add_compile_definition_option(PUTILS PUTILS_DIRECT_MEMORY_MAPPER ON)
 
 add_library(putils SHARED ${SOURCES})
 set_target_properties(putils PROPERTIES PREFIX "${PROJECT_NAME}_") 
