@@ -21,7 +21,7 @@ std::string human(size_t bytes) noexcept {
 
 MemBlock::MemBlock(bool header, size_t log_len, MetaBlock& meta_block):
 header(header), free(true), valid(true), len_bytes(0), meta_block(meta_block),
-starting(nullptr), nex_block(nullptr), pre_block() {
+starting(nullptr), addrlen_v(nullptr, 0), nex_block(nullptr), pre_block() {
     if (header) {
         try {
             if (log_len > DEFAULT_LOG_LEN_UPPER_BOUND) {
@@ -32,7 +32,9 @@ starting(nullptr), nex_block(nullptr), pre_block() {
                 logger.add(ss.str(), RuntimeLog::Level::WARN);
             }
             log_len = std::max<size_t>(std::min<size_t>(log_len, DEFAULT_LOG_LEN_UPPER_BOUND), DEFAULT_LOG_LEN_LOWER_BOUND);
-            starting = reinterpret_cast<uPtr>(std::aligned_alloc(DEFAULT_ALIGNMENT, len_bytes = 1ull << log_len));
+            // starting = reinterpret_cast<uPtr>(std::aligned_alloc(DEFAULT_ALIGNMENT, len_bytes = 1ull << log_len));
+            addrlen_v = putils::aligned_alloc(DEFAULT_ALIGNMENT, len_bytes = 1ull << log_len);
+            starting = reinterpret_cast<uPtr>(addrlen_v.addr);
             if (!starting) {
                 throw std::bad_alloc();
             }
@@ -54,7 +56,8 @@ MemBlock::~MemBlock() {
     #endif
     if (header && starting) {
         // Memory is managed by header blocks, and only the header block calls std::free to release the storage.
-        std::free(starting);
+        // std::free(starting);
+        putils::aligned_free(addrlen_v);
         starting = nullptr;
     }
 }

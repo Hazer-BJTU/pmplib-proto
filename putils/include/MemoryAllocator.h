@@ -7,6 +7,7 @@
 #include <cstdlib>
 
 #include "RuntimeLog.h"
+#include "DirectMapper.h"
 
 namespace putils {
 
@@ -59,6 +60,7 @@ private:
     size_t len_bytes;
     MetaBlock& meta_block;
     uPtr starting;
+    addrlen addrlen_v;
     BlockHandle nex_block;
     WeakHandle pre_block;
     friend MetaBlock;
