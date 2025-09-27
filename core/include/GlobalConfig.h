@@ -12,13 +12,32 @@
 #include "RuntimeLog.h"
 #include "FiniteStateMachine.hpp"
 
-// #ifdef MPENGINE_CONFIG_LOAD_DEFAULT
-// #include "DefaultConfigs.hpp"
-// #endif 
-
 namespace mpengine {
 
 class GlobalConfig;
+
+/**
+ * @class ConfigType
+ * @brief A variant-based configuration value type that supports multiple data types.
+ *
+ * This class provides a type-safe container for configuration values that can hold
+ * various data types including integers, floating-point numbers, booleans, strings, 
+ * and an empty state. It supports type conversion, stream I/O operations, and safe 
+ * value retrieval with fallback options.
+ *
+ * The internal data is stored as a std::variant supporting the following types:
+ * - std::monostate (empty/uninitialized)
+ * - int64_t (integer values)
+ * - double (floating-point values)  
+ * - bool (boolean values)
+ * - std::string (string values)
+ *
+ * @note This class is designed to be used with the GlobalConfig class as a friend.
+ * @see GlobalConfig
+ * 
+ * @author Hazer
+ * @date 2025/9/26
+ */
 
 class ConfigType {
 private:
@@ -99,22 +118,9 @@ public:
  * 
  * The configuration file format is JSON-like with support for comments. Example:
  * @code
- * {
- *     "Configurations": {
- *         <Comments can be placed like this.>
- *         <All other settings must be contained in the outer domain "Configurations".>
- *         "basic_types": { <It supports basic types.> "integer": 100, "double": 1e-4, "bool": true
- *              <Both "true / false" and "True / False" are OK.>, "string": "100101" <Strings must be enclosed in quotation marks.>,
- *              "string": "version_1.0" <Strings cannot contain spaces or comments; use underscores instead.>,
- *              "inner_domain" <Supports nested dictionaries> : {
- *                  <Nothing here...>
- *              }
- *         },
- *         "list": {"0": 0, "1": 1, "2": 2, "3": 3} <The list uses "0", "1", "2", "3" as keys.>,
- *         <Nested keys are connected using "/".>
- *         "first": {"second": {"third": { "value": 0 <key = "first/second/third/value"> }}}
- *     }
- * }
+ * 
+ * Please refer to config/configurations.conf.in
+ * 
  * @endcode
  * 
  * @note Key names should avoid comment symbols and spaces (use underscores instead).
@@ -202,6 +208,24 @@ public:
     void export_all(const std::string& input_filepath = "") const noexcept;
     void read_from(const std::string& input_filepath = "") noexcept;
 };
+
+/**
+ * @class ConfigParser
+ * @brief A finite state automaton for parsing configuration files into lexical tokens.
+ * 
+ * This class inherits from Automaton and implements a parser that tokenizes 
+ * configuration input into key-value pairs and structural brackets. It handles
+ * JSON-like syntax with quoted strings, numeric values, and nested structures.
+ * 
+ * The parser processes input through a state machine that recognizes:
+ * - Object boundaries via curly braces {}
+ * - Key-value pairs separated by colons
+ * - String values (quoted) and other values (alphanumeric with +-.)
+ * - Whitespace and commas as separators
+ * 
+ * @note Throws exceptions on parsing errors (caught by PUTILS_CATCH_THROW_GENERAL)
+ * @see Automaton
+ */
 
 class ConfigParser: public Automaton {
 public:
