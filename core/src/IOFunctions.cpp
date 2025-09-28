@@ -25,15 +25,17 @@ size_t precision_to_log_len(const size_t digits_cnt, const IOBasic iobasic) noex
 }
 
 void write_store_digit_to_stream(std::ostream& stream, const IOBasic iobasic, uint64_t digit, bool filling) noexcept {
+    std::ostringstream oss;
     if (filling) {
-        stream << std::setw(log_store_base(iobasic)) << std::setfill('0');
+        oss << std::setw(log_store_base(iobasic)) << std::setfill('0');
     }
     switch(iobasic) {
-        case IOBasic::oct: stream << std::oct << digit; return;
-        case IOBasic::dec: stream << std::dec << digit; return;
-        case IOBasic::hex: stream << std::hex << digit; return;
-        default: stream << digit;
+        case IOBasic::oct: oss << std::oct << digit; break;
+        case IOBasic::dec: oss << std::dec << digit; break;
+        case IOBasic::hex: oss << std::hex << digit; break;
+        default: oss << digit;
     }
+    stream << oss.str();
     return;
 }
 

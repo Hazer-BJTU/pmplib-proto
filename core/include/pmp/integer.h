@@ -20,7 +20,7 @@ private:
     friend void collect_graph_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
     friend void collect_proce_details(std::ostream& stream, const std::shared_ptr<IntegerDAGContext::Field>& field) noexcept;
 public:
-    IntegerDAGContext(size_t precision, IOBasic iobasic);
+    IntegerDAGContext(size_t precision = 0, IOBasic iobasic = IOBasic::dec);
     ~IntegerDAGContext();
     IntegerDAGContext(const IntegerDAGContext& context);
     IntegerDAGContext& operator = (const IntegerDAGContext& context);

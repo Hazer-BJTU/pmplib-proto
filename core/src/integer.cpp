@@ -33,10 +33,13 @@ struct IntegerVarReference::Field {
 bool nodes_topological_sort(IntegerDAGContext::Field::NodeHandles& node_handle_list) noexcept;
 
 IntegerDAGContext::IntegerDAGContext(size_t precesion, IOBasic iobasic) {
+    static const size_t min_log_length = GlobalConfig::get_global_config().get_or_else<int64_t>(
+        "Configurations/core/BasicIntegerType/limits/min_log_length", 8ull
+    );
     field = std::make_shared<IntegerDAGContext::Field>(
         IntegerDAGContext::Field::Signatures(),
         IntegerDAGContext::Field::NodeHandles(),
-        iofun::precision_to_log_len(precesion, iobasic),
+        std::max<size_t>(iofun::precision_to_log_len(precesion, iobasic), min_log_length),
         iobasic, false
     );
 }

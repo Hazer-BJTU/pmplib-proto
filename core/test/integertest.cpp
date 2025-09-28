@@ -8,7 +8,7 @@ int main() {
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    pmp::context context(1000, pmp::io::dec);
+    pmp::context context(0, pmp::io::hex);
     pmp::integer a_n_2("0", context);
     pmp::integer a_n_1("1", context);
     for (size_t i = 2; i <= 1000; i++) {
@@ -16,7 +16,7 @@ int main() {
         a_n_2 = a_n_1;
         a_n_1 = a_n;
     }
-    std::cout << "F[1000] = " << a_n_1 << std::endl;
+    std::cout << "(F[1000])hex = 0x" << a_n_1 << std::endl;
 
     auto end = std::chrono::high_resolution_clock::now();
 
