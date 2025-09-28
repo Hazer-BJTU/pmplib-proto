@@ -58,11 +58,9 @@ workers(), active_workers(num_workers), cv_lock(), cv_inactive(), cv_all_done(),
                                 } else {
                                     // Steal failed, yield the time slice.
                                     failure_cnt++;
-                                    std::this_thread::yield();
                                 }
                             #else
                                 failure_cnt++;
-                                std::this_thread::yield();
                             #endif
                         }
                     }
@@ -103,7 +101,7 @@ std::random_device ThreadPool::seed_generator;
 size_t ThreadPool::num_executors = std::thread::hardware_concurrency();
 size_t ThreadPool::executor_capacity = 1024;
 size_t ThreadPool::num_workers_per_executor = 1;
-size_t ThreadPool::fail_block_threshold = 8;
+size_t ThreadPool::fail_block_threshold = 1;
 std::atomic<bool> ThreadPool::initialized{false};
 std::mutex ThreadPool::setting_lock;
 
@@ -123,9 +121,9 @@ ThreadPool::ThreadPool(): executors() {
 ThreadPool::~ThreadPool() { shutdown(); }
 
 size_t ThreadPool::get_executor_id() noexcept {
-    thread_local std::mt19937 gen(seed_generator());
-    thread_local std::uniform_int_distribution<size_t> udist(0, ThreadPool::num_executors - 1);
-    size_t executor_id = udist(gen);
+    static const size_t num_executors = ThreadPool::num_executors;
+    thread_local Xorshift32 xorshift32_gen(seed_generator());
+    size_t executor_id = xorshift32_gen(num_executors);
     return executor_id;
 }
 

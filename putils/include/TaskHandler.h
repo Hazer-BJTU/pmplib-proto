@@ -10,6 +10,17 @@
 
 namespace putils {
 
+struct Xorshift32 {
+    uint32_t state;
+    Xorshift32(uint32_t seed = 123456789): state((seed == 0 ? 123456789 : seed)) {}
+    uint32_t operator() (uint32_t n) {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        return state % n;
+    }
+};
+
 struct Task {
     Task();
     virtual ~Task() = 0;

@@ -207,6 +207,9 @@ public:
         /* return head.load(std::memory_order_relaxed) == tail.load(std::memory_order_relaxed); */
         return qlen.load(std::memory_order_acquire) == 0;
     }
+    bool weak_empty() const noexcept {
+        return qlen.load(std::memory_order_relaxed) == 0;
+    }
     size_t size() const noexcept {
         /* size_t current_head = head.load(std::memory_order_relaxed);
            size_t current_tail = tail.load(std::memory_order_relaxed);
