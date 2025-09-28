@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "DirectMapper.h"
+#include "AlignedMem.h"
 
 int main() {
     auto addrlen = putils::aligned_alloc(64, 128 * 4);

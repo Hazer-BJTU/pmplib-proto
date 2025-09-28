@@ -7,7 +7,7 @@
 #include <cstdlib>
 
 #include "RuntimeLog.h"
-#include "DirectMapper.h"
+#include "AlignedMem.h"
 
 namespace putils {
 

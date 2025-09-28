@@ -1,4 +1,4 @@
-#include "DirectMapper.h"
+#include "AlignedMem.h"
 
 #if defined(__linux__)
 
