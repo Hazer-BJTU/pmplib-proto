@@ -6,13 +6,14 @@ Task::Task() {}
 
 Task::~Task() {}
 
-TaskHandler::TaskHandler(size_t num_workers, size_t queue_capacity): 
+TaskHandler::TaskHandler(const size_t num_workers, const size_t queue_capacity, const size_t fail_threshold): 
 workers(), active_workers(num_workers), cv_lock(), cv_inactive(), cv_all_done(), state(INACTIVE), quit(false) {
     try {
         task_queue = std::make_unique<LFQ>(queue_capacity);
         workers.reserve(num_workers);
         for (int i = 0; i < num_workers; i++) {
-            workers.emplace_back([this]() {
+            workers.emplace_back([this, fail_threshold]() {
+                size_t failure_cnt = 0;
                 while(true) {
                     std::shared_ptr<Task> task_ptr;
                     if (task_queue->try_pop(task_ptr) && task_ptr) {
@@ -26,7 +27,8 @@ workers(), active_workers(num_workers), cv_lock(), cv_inactive(), cv_all_done(),
                             RuntimeLog::Level::WARN
                         )
                     } else if (task_queue->empty()) {
-                        if (state.load(std::memory_order_acquire) == INACTIVE) {
+                        if (state.load(std::memory_order_acquire) == INACTIVE || failure_cnt >= fail_threshold) {
+                            failure_cnt = 0;
                             /* Check the flag 'state' to see if an INACTIVE signal is received.
                                Here it shares the lock cv_lock with wait_all_done(),
                                and both condition variables cv_inactive and cv_all_done share cv_lock. */
@@ -55,9 +57,11 @@ workers(), active_workers(num_workers), cv_lock(), cv_inactive(), cv_all_done(),
                                     )
                                 } else {
                                     // Steal failed, yield the time slice.
+                                    failure_cnt++;
                                     std::this_thread::yield();
                                 }
                             #else
+                                failure_cnt++;
                                 std::this_thread::yield();
                             #endif
                         }
@@ -99,6 +103,7 @@ std::random_device ThreadPool::seed_generator;
 size_t ThreadPool::num_executors = std::thread::hardware_concurrency();
 size_t ThreadPool::executor_capacity = 1024;
 size_t ThreadPool::num_workers_per_executor = 1;
+size_t ThreadPool::fail_block_threshold = 8;
 std::atomic<bool> ThreadPool::initialized{false};
 std::mutex ThreadPool::setting_lock;
 
@@ -109,7 +114,8 @@ ThreadPool::ThreadPool(): executors() {
     for (int i = 0; i < ThreadPool::num_executors; i++) {
         executors.emplace_back(std::make_unique<TaskHandler>(
             ThreadPool::num_workers_per_executor,
-            ThreadPool::executor_capacity
+            ThreadPool::executor_capacity,
+            ThreadPool::fail_block_threshold
         ));
     }
 }
@@ -123,14 +129,14 @@ size_t ThreadPool::get_executor_id() noexcept {
     return executor_id;
 }
 
-bool ThreadPool::set_global_threadpool(size_t num_executors, size_t executor_capacity, size_t num_workers_per_executor) noexcept {
+bool ThreadPool::set_global_threadpool(size_t num_executors, size_t executor_capacity, size_t num_workers_per_executor, size_t fail_block_threshold) noexcept {
     auto& logger = RuntimeLog::get_global_log();
     std::lock_guard<std::mutex> lock(ThreadPool::setting_lock);
     if (ThreadPool::initialized.load(std::memory_order_acquire)) {
         logger.add("(ThreadPool): Settings cannot be modified after the instance has been initialized.");
         return false;
     }
-    if (num_executors == 0 || num_workers_per_executor == 0) {
+    if (num_executors == 0 || num_workers_per_executor == 0 || fail_block_threshold == 0) {
         logger.add("(ThreadPool): All numeric arguments must be positive integers.");
         return false;
     }
@@ -141,6 +147,7 @@ bool ThreadPool::set_global_threadpool(size_t num_executors, size_t executor_cap
     ThreadPool::num_executors = num_executors;
     ThreadPool::executor_capacity = executor_capacity;
     ThreadPool::num_workers_per_executor = num_workers_per_executor;
+    ThreadPool::fail_block_threshold = fail_block_threshold;
     size_t total_workers = ThreadPool::num_executors * ThreadPool::num_workers_per_executor + 1;
     const size_t max_concurrency = std::thread::hardware_concurrency();
     float ratio = total_workers * 1.0f / max_concurrency;

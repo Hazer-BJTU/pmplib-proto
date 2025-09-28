@@ -56,7 +56,7 @@ private:
     std::atomic<bool> quit;
     friend ThreadPool;
 public:
-    TaskHandler(size_t num_workers, size_t queue_capacity);
+    TaskHandler(const size_t num_workers, const size_t queue_capacity, const size_t fail_threshold);
     ~TaskHandler();
     TaskHandler(const TaskHandler&) = delete;
     TaskHandler& operator = (const TaskHandler&) = delete;
@@ -154,6 +154,7 @@ private:
     static size_t num_executors;
     static size_t executor_capacity;
     static size_t num_workers_per_executor;
+    static size_t fail_block_threshold;
     static std::atomic<bool> initialized;
     static std::mutex setting_lock;
     Partition executors;
@@ -168,7 +169,8 @@ public:
     static bool set_global_threadpool(
         size_t num_executors = ThreadPool::num_executors,
         size_t executor_capacity = ThreadPool::executor_capacity,
-        size_t num_workers_per_executor = ThreadPool::num_workers_per_executor
+        size_t num_workers_per_executor = ThreadPool::num_workers_per_executor,
+        size_t fial_block_threshold = ThreadPool::fail_block_threshold
     ) noexcept;
     static ThreadPool& get_global_threadpool() noexcept;
     void submit(const TaskPtr& task) noexcept;
