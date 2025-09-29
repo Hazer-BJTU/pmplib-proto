@@ -367,7 +367,7 @@ inline void add_dependency(std::latch& synchronizer, BasicComputeUnitType& prede
 inline void add_dependency(std::atomic<size_t>& synchronizer, std::mutex& cv_lock, std::condition_variable& cv_block_main, BasicComputeUnitType& predecessor) noexcept {
     predecessor.forward_calls.emplace_back([&synchronizer, &cv_lock, &cv_block_main] (int signal) {
         if (synchronizer.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-            std::unique_lock<std::mutex> lock(cv_lock);
+            // std::unique_lock<std::mutex> lock(cv_lock);
             cv_block_main.notify_all();
         }
     });

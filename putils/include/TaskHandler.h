@@ -63,6 +63,7 @@ private:
     std::condition_variable cv_inactive;
     std::condition_variable cv_all_done;
     std::unique_ptr<LFQ> task_queue;
+    LFQ* task_queue_view;
     std::atomic<bool> state; //Non-volatile variable, no cache line padding is used here.
     std::atomic<bool> quit;
     friend ThreadPool;
@@ -158,6 +159,7 @@ std::shared_ptr<Task> wrap_task(Lambda&& target) noexcept {
 class ThreadPool {
 public:
     using Partition = std::vector<std::unique_ptr<TaskHandler>>;
+    using Partition_view = std::vector<TaskHandler*>;
     using TaskList = std::vector<std::shared_ptr<Task>>;
     using TaskPtr = std::shared_ptr<Task>;
 private:
@@ -169,6 +171,7 @@ private:
     static std::atomic<bool> initialized;
     static std::mutex setting_lock;
     Partition executors;
+    Partition_view executors_view;
     ThreadPool();
     ~ThreadPool();
     size_t get_executor_id() noexcept;

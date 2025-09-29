@@ -10,13 +10,14 @@ TaskHandler::TaskHandler(const size_t num_workers, const size_t queue_capacity, 
 workers(), active_workers(num_workers), cv_lock(), cv_inactive(), cv_all_done(), state(INACTIVE), quit(false) {
     try {
         task_queue = std::make_unique<LFQ>(queue_capacity);
+        task_queue_view = task_queue.get();
         workers.reserve(num_workers);
         for (int i = 0; i < num_workers; i++) {
             workers.emplace_back([this, fail_threshold]() {
                 size_t failure_cnt = 0;
                 while(true) {
                     std::shared_ptr<Task> task_ptr;
-                    if (task_queue->try_pop(task_ptr) && task_ptr) {
+                    if (task_queue_view->try_pop(task_ptr) && task_ptr) {
                         /* Attempt to fetch a task from the queue; 
                            if failed, use the empty() method to check whether 
                            the queue is truly empty rather than a spurious failure. */
@@ -26,7 +27,7 @@ workers(), active_workers(num_workers), cv_lock(), cv_inactive(), cv_all_done(),
                             "(Worker): Task loss due to runtime errors.",
                             RuntimeLog::Level::WARN
                         )
-                    } else if (task_queue->empty()) {
+                    } else if (task_queue_view->empty()) {
                         if (state.load(std::memory_order_acquire) == INACTIVE || failure_cnt >= fail_threshold) {
                             failure_cnt = 0;
                             /* Check the flag 'state' to see if an INACTIVE signal is received.
@@ -115,15 +116,15 @@ ThreadPool::ThreadPool(): executors() {
             ThreadPool::executor_capacity,
             ThreadPool::fail_block_threshold
         ));
+        executors_view.push_back(executors.back().get());
     }
 }
 
 ThreadPool::~ThreadPool() { shutdown(); }
 
 size_t ThreadPool::get_executor_id() noexcept {
-    static const size_t num_executors = ThreadPool::num_executors;
     thread_local Xorshift32 xorshift32_gen(seed_generator());
-    size_t executor_id = xorshift32_gen(num_executors);
+    size_t executor_id = xorshift32_gen(ThreadPool::num_executors);
     return executor_id;
 }
 
@@ -170,9 +171,9 @@ ThreadPool& ThreadPool::get_global_threadpool() noexcept {
 void ThreadPool::submit(const TaskPtr& task) noexcept {
     while(true) {
         size_t executor_id = get_executor_id();
-        bool successful = executors[executor_id]->task_queue->try_push(task);
+        bool successful = executors_view[executor_id]->task_queue_view->try_push(task);
         if (successful) {
-            executors[executor_id]->activate();
+            executors_view[executor_id]->activate();
             return;
         } else {
             std::this_thread::yield();
@@ -196,7 +197,7 @@ ThreadPool::TaskPtr ThreadPool::work_stealing() noexcept {
         next_id != starting_id; 
         id = next_id, next_id = (id + 1 == ThreadPool::num_executors) ? 0 : id + 1
     ) {
-        if (executors[id]->task_queue->try_pop(task)) {
+        if (executors_view[id]->task_queue_view->try_pop(task)) {
             return task;
         }
     }
